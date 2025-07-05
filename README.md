@@ -84,6 +84,7 @@
 ## 5  Дополнительная документация
 
 * [Бизнес‑введение](docs/business_intro.md)
+* [Лесенка уровней и глоссарий PRISM](docs/layers_and_glossary.md)
 * [Архитектурный обзор](docs/architecture_overview.md)
 * [Дорожная карта](docs/roadmap.md)
 * [DSL «PRISM Blueprint»](docs/blueprint_dsl.md)
