@@ -87,7 +87,7 @@ BusinessModule ──> {TechnicalService+} ──> {GenericService*} ──> {In
 
 `module‑graph.yaml` хранит эти связи. Core‑Model строит transitively‑closed набор сервисов и инфраструктуры для расчёта.
 
-### 5.2 ER‑модель (обновлённая)
+### 5.2 ER‑модель
 
 ```
 Customer(1)──(N) Project──(N) Zone──(N) Report

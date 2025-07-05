@@ -86,6 +86,7 @@
 * [Бизнес‑введение](docs/business_intro.md)
 * [Архитектурный обзор](docs/architecture_overview.md)
 * [Дорожная карта](docs/roadmap.md)
+* [DSL «PRISM Blueprint»](docs/blueprint_dsl.md)
 
 ---
 

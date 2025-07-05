@@ -1,0 +1,51 @@
+kind: Blueprint
+team: core-team
+version: 1.0.0
+
+business_modules: {}
+
+technical_services:
+  e-sign:
+    image: registry.bims.dev/e-sign:1.4.2
+    resources:
+      profile: small-bg
+    capacity:
+      cpu: "0.03 + 0.00003 * online_users"
+    depends_on: [postgres-primary]
+
+  notification:
+    image: registry.bims.dev/notify:2.1.0
+    resources:
+      profile: xsmall-web@dyn
+    depends_on: [kafka-cluster]
+
+generic_services: {}
+
+infra_dependencies:
+  postgres-primary:
+    type: postgres
+    version: "16"
+    capacity:
+      storage_gb: "10 + 0.005 * structured_data_gb"
+  kafka-cluster:
+    type: kafka
+    capacity:
+      partitions: "ceil(rps / 100)"
+
+resource_profiles:
+  small-bg:
+    static:
+      requests: { cpu: "100m", memory: "256Mi" }
+      limits:   { cpu: "300m", memory: "512Mi" }
+  xsmall-web:
+    static:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits:   { cpu: "150m", memory: "256Mi" }
+    dynamic:
+      requests:
+        cpu:    "0.02 + 0.00002 * online_users"
+        memory: "64Mi  + 0.05Mi * online_users"
+      limits:
+        cpu:    "0.06 + 0.00006 * online_users"
+        memory: "128Mi + 0.08Mi * online_users"
+

@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bims.dev/prism/blueprint.schema.json",
+  "title": "PRISM Blueprint",
+  "type": "object",
+  "required": ["kind", "team", "version"],
+  "properties": {
+    "kind": { "const": "Blueprint" },
+    "team": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": {
+      "type": "string",
+      "description": "semver",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[\\w\\.-]+)?(?:\\+[\\w\\.-]+)?$"
+    },
+    "business_modules": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/BusinessModule" }
+    },
+    "technical_services": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/TechnicalService" }
+    },
+    "generic_services": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/GenericService" }
+    },
+    "infra_dependencies": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/InfraDependency" }
+    },
+    "resource_profiles": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/ResourceProfile" }
+    }
+  },
+  "definitions": {
+    "BusinessModule": {
+      "type": "object",
+      "required": ["title", "services"],
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "services": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": { "type": ["number", "string", "boolean"] }
+        }
+      }
+    },
+    "TechnicalService": {
+      "type": "object",
+      "required": ["image", "resources"],
+      "properties": {
+        "image": { "type": "string" },
+        "resources": { "$ref": "#/definitions/ServiceResources" },
+        "capacity": { "$ref": "#/definitions/Capacity" },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "GenericService": { "$ref": "#/definitions/TechnicalService" },
+    "InfraDependency": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "version": { "type": "string" },
+        "capacity": { "$ref": "#/definitions/Capacity" }
+      }
+    },
+    "ServiceResources": {
+      "type": "object",
+      "oneOf": [
+        {
+          "required": ["profile"],
+          "properties": { "profile": { "type": "string" } }
+        }
+      ]
+    },
+    "Capacity": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "ResourceProfile": {
+      "type": "object",
+      "properties": {
+        "static": {
+          "type": "object",
+          "properties": {
+            "requests": { "$ref": "#/definitions/ResourceLimit" },
+            "limits":   { "$ref": "#/definitions/ResourceLimit" }
+          }
+        },
+        "dynamic": {
+          "type": "object",
+          "properties": {
+            "requests": { "$ref": "#/definitions/ResourceFormula" },
+            "limits":   { "$ref": "#/definitions/ResourceFormula" }
+          }
+        }
+      }
+    },
+    "ResourceLimit": {
+      "type": "object",
+      "properties": {
+        "cpu":    { "type": "string" },
+        "memory": { "type": "string" }
+      },
+      "required": ["cpu", "memory"]
+    },
+    "ResourceFormula": {
+      "type": "object",
+      "properties": {
+        "cpu":    { "type": "string" },
+        "memory": { "type": "string" }
+      },
+      "required": ["cpu", "memory"]
+    }
+  }
+}
+
