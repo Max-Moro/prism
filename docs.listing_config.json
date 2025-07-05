@@ -1,0 +1,18 @@
+{
+  "extensions": [ ".md", ".yaml", ".json" ],
+  "exclude": [
+    ".idea/",
+    ".venv/",
+
+    "__pycache__/",
+    "**/__pycache__/**",
+    ".pytest_cache/",
+    "**/.pytest_cache/**",
+
+    "docs.listing_config.json",
+    "core-model.listing_config.json",
+    "core-model.roadmap.listing_config.json",
+
+    "core-model/"
+  ]
+}

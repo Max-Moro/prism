@@ -1,0 +1,25 @@
+{
+  "extensions": [ ".py", ".md", ".yaml", ".json" ],
+  "skip_empty": true,
+  "skip_trivial_inits": true,
+  "trivial_init_max_noncomment": 1,
+  "exclude": [
+    ".idea/",
+    ".venv/",
+
+    "__pycache__/",
+    "**/__pycache__/**",
+    ".pytest_cache/",
+    "**/.pytest_cache/**",
+
+    "docs.listing_config.json",
+    "core-model.listing_config.json",
+    "core-model.roadmap.listing_config.json",
+
+    "blueprints/",
+    "docs/",
+    "README.md",
+
+    "core-model/ROADMAP.md"
+  ]
+}

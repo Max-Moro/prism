@@ -1,0 +1,24 @@
+{
+  "extensions": [ ".md" ],
+  "exclude": [
+    ".idea/",
+    ".venv/",
+
+    "__pycache__/",
+    "**/__pycache__/**",
+    ".pytest_cache/",
+    "**/.pytest_cache/**",
+
+    "docs.listing_config.json",
+    "core-model.listing_config.json",
+    "core-model.roadmap.listing_config.json",
+
+    "blueprints/",
+    "docs/",
+    "README.md",
+
+    "core-model/src/",
+    "core-model/tests/",
+    "core-model/README.md"
+  ]
+}
