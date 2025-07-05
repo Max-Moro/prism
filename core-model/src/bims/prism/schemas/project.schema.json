@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bims.dev/prism/project.schema.json",
+  "title": "PRISM Project Sizing File",
+  "type": "object",
+  "required": ["customer", "zones"],
+  "additionalProperties": false,
+  "properties": {
+    "customer": { "type": "string" },
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "enabled_modules", "load_profile"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "enabled_modules": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string" }
+          },
+          "load_profile": { "$ref": "load_profile.schema.json" }
+        }
+      }
+    }
+  }
+}

@@ -8,8 +8,10 @@
 ## 1. Назначение модуля
 
 * **Принимает**:  
-  * YAML-Blueprint-ы команд (`*.blueprint.yaml`)  
-  * YAML/JSON load-profile с нагрузочными параметрами
+  * **Project-файл** заказчика (`*.sizing.yaml`) — описывает зоны и
+    включённые BusinessModule.  
+  * Каталог или набор `Blueprint`-ов (`*.blueprint.yaml`) — формулы и граф зависимостей
+    всех команд.
 * **Вычисляет** ресурсы (CPU/RAM/Storage/…) для всех сервисов и инфраструктуры
 * **Возвращает**:
   * JSON-объект сайзинга (может быть скормлен адаптерам XLSX/PDF)
@@ -84,11 +86,11 @@ core-model/
 ## 5. CLI `prism-cli`
 
 ```bash
-usage: prism-cli calculate [OPTIONS] BLUEPRINT_PATH LOAD_PATH
+usage: prism-cli calculate [OPTIONS] PROJECT_FILE [BLUEPRINT_DIR]
 
 Arguments:
-  BLUEPRINT_PATH  *.blueprint.yaml
-  LOAD_PATH       load_profile.(yaml|json)
+  PROJECT_FILE    customer sizing file (`*.sizing.yaml`)
+  [BLUEPRINT_DIR] Folder with `*.blueprint.yaml` (default: `blueprints/`)
 
 Options:
   --json-out FILE  файл, куда сохранить результат (иначе вывод в stdout)
@@ -99,9 +101,9 @@ Options:
 
 ```bash
 python -m bims.prism.cli calculate ^
-  blueprints\core_team.blueprint.yaml ^
-  examples\load_profile.yaml ^
-  --json-out out\result.json
+  projects\\acme.sizing.yaml ^
+  blueprints\\ ^
+  --json-out out\\acme.result.json
 ```
 
 ---
@@ -178,13 +180,8 @@ jobs:
 
 ---
 
-## 10. Дорожная карта Core-Model (выжимка)
+## 10. Дорожная карта Core-Model
 
-| Версия | Ключевые фичи |
-|--------|---------------|
-| **0.1** | Pydantic-схемы, CLI, mini-eval, 80 % формул |
-| **0.2** | XLSX-Adapter интеграция, golden-snapshot-тесты |
-| **0.4** | gRPC-server + health-probe |
-| **1.0** | Helm-chart, prod-ready CPU ≤ 30 c/report |
+* [Актуальная дорожная карта для Core-Model](./ROADMAP.md)
+* [Полная Roadmap](../docs/roadmap.md)
 
-Полная Roadmap: `docs/roadmap.md`.

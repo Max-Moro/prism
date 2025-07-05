@@ -3,21 +3,36 @@ from pathlib import Path
 import typer
 
 from .eval import MiniEvalEngine
+from typing import Optional
+
 from .models.blueprint import Blueprint
-from .models.load_profile import LoadProfile
+from .models.project import Project
 
 app = typer.Typer(help="PRISM Sizing CLI")
 
-@app.command("calculate")
+@app.command()
 def calculate(
-    blueprint_path: Path = typer.Argument(..., exists=True, help="*.blueprint.yaml"),
-    load_path: Path = typer.Argument(..., exists=True, help="load_profile.yaml"),
-    json_out: Path = typer.Option(None, help="Куда сохранить JSON-результат")
+    project_file: Path = typer.Argument(..., exists=True, help="*.sizing.yaml"),
+    blueprint_dir: Optional[Path] = typer.Argument(
+        None,
+        exists=True,
+        readable=True,
+        dir_okay=True,
+        file_okay=True,
+        help="Каталог или файл Blueprint (default: ./blueprints)",
+    ),
+    json_out: Path = typer.Option(None, help="Куда сохранить JSON-результат"),
 ):
-    """Запускает расчёт сайзинга."""
-    bp = Blueprint.parse_file(blueprint_path)
-    lp = LoadProfile.parse_file(load_path)
-    engine = MiniEvalEngine(bp, lp)
+    """Запускает расчёт сайзинга для всех зон проекта."""
+    project = Project.parse_file(project_file)
+
+    # соберём все Blueprint-ы в памяти
+    bp_files = (
+        list(blueprint_dir.glob("*.blueprint.yaml")) if blueprint_dir else []
+    )
+    blueprints = [Blueprint.parse_file(p) for p in bp_files]
+
+    engine = MiniEvalEngine(blueprints, project)
     result = engine.run()
     if json_out:
         json_out.write_text(result.model_dump_json(indent=2))
