@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bims.dev/prism/load_profile.schema.json",
+  "title": "PRISM Load Profile",
+  "type": "object",
+  "description": "Нагрузочные параметры, упоминаемые в формулах Blueprint",
+  "required": [
+    "online_users",
+    "total_users",
+    "rps",
+    "rps_p95",
+    "structured_data_gb",
+    "unstructured_data_gb"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "online_users":         { "type": "integer", "minimum": 0 },
+    "total_users":          { "type": "integer", "minimum": 0 },
+    "rps":                  { "type": "integer", "minimum": 0 },
+    "rps_p95":              { "type": "integer", "minimum": 0 },
+    "jobs_rate":            { "type": "integer", "minimum": 0 },
+    "structured_data_gb":   { "type": "number",  "minimum": 0 },
+    "unstructured_data_gb": { "type": "number",  "minimum": 0 }
+  }
+}
