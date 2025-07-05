@@ -48,7 +48,8 @@
           "type": "object",
           "additionalProperties": { "type": ["number", "string", "boolean"] }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "TechnicalService": {
       "type": "object",
@@ -61,7 +62,8 @@
           "type": "array",
           "items": { "type": "string" }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "GenericService": { "$ref": "#/definitions/TechnicalService" },
     "InfraDependency": {
@@ -71,14 +73,26 @@
         "type": { "type": "string" },
         "version": { "type": "string" },
         "capacity": { "$ref": "#/definitions/Capacity" }
-      }
+      },
+      "additionalProperties": false
     },
     "ServiceResources": {
       "type": "object",
       "oneOf": [
         {
           "required": ["profile"],
-          "properties": { "profile": { "type": "string" } }
+          "properties": {
+            "profile": { "type": "string", "pattern": "^[a-z0-9-]+(@dyn)?$" }
+          },
+          "additionalProperties": false
+        },
+        {
+          "required": ["requests", "limits"],
+          "properties": {
+            "requests": { "$ref": "#/definitions/ResourceLimit" },
+            "limits":   { "$ref": "#/definitions/ResourceLimit" }
+          },
+          "additionalProperties": false
         }
       ]
     },
@@ -103,7 +117,8 @@
             "limits":   { "$ref": "#/definitions/ResourceFormula" }
           }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "ResourceLimit": {
       "type": "object",
@@ -111,6 +126,7 @@
         "cpu":    { "type": "string" },
         "memory": { "type": "string" }
       },
+      "additionalProperties": false,
       "required": ["cpu", "memory"]
     },
     "ResourceFormula": {
@@ -119,6 +135,7 @@
         "cpu":    { "type": "string" },
         "memory": { "type": "string" }
       },
+      "additionalProperties": false,
       "required": ["cpu", "memory"]
     }
   }

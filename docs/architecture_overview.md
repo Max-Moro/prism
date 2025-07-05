@@ -85,18 +85,22 @@
 BusinessModule ──> {TechnicalService+} ──> {GenericService*} ──> {InfrastructureDependency*}
 ```
 
-`module‑graph.yaml` хранит эти связи. Core‑Model строит transitively‑closed набор сервисов и инфраструктуры для расчёта.
+`<team_name>.blueprint.yaml` хранит эти связи. Core‑Model строит transitively‑closed набор сервисов и инфраструктуры для расчёта.
 
 ### 5.2 ER‑модель
 
+Упрощенная ER‑модель.
+
 ```
-Customer(1)──(N) Project──(N) Zone──(N) Report
-                           │
-                           └──(N) EnabledBusinessModule
-                                       │
-                                       └─(N) ResolvedService
-                                                │
-                                                └─(N) ResolvedInfra
+Customer(1) ── (N) Project                        ──                    (N) Zone ── (N) Report
+                      │                                                     |
+                      └──(N) EnabledBusinessModule                          └──(1) Load Profile
+                                  │
+                                  └─(N) ResolvedService
+                                           │
+                                           └─(N) ResolvedGeneric
+                                                    └─(N) ResolvedInfra
+                                           └─(N) ResolvedInfra
 ```
 
 ---
