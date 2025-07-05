@@ -1,5 +1,5 @@
 {
-  "extensions": [ ".py", ".md", ".yaml", ".json" ],
+  "extensions": [ ".py", ".md", ".yaml", ".json", ".txt" ],
   "skip_empty": true,
   "skip_trivial_inits": true,
   "trivial_init_max_noncomment": 1,
