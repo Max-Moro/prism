@@ -1,0 +1,6 @@
+pytest==8.3.1
+pytest-cov==5.0.0
+ruff==0.4.6            # Linter + автоимпорт
+black==24.4.2
+mypy==1.10.0
+pre-commit==3.7.1

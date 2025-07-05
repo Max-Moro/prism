@@ -65,8 +65,8 @@ flowchart LR
 ## 5. Интеграция с CI/CD
 
 | Релиз   | Тег      | Автоматические шаги                                  | Артефакты                                        |
-| ------- | -------- | ---------------------------------------------------- | ------------------------------------------------ |
-| **0.x** | `v0.x.*` | Docker build + GHCR, GitHub Release XLSX/PDF примеры | `core-model:<tag>`, `service:<tag>`, `spi:<tag>` |
+| ------- | -------- | ---------------------------------------------------- |--------------------------------------------------|
+| **0.x** | `v0.x.*` | Docker build + GHCR, GitHub Release XLSX/PDF примеры | `core-model:<tag>`, `service:<tag>`, `spa:<tag>` |
 | **1.x** | `v1.x.*` | Доп. шаг: Helm‑chart publish                         | Chart repo `oci://ghcr.io/bims/prism`            |
 
 ---

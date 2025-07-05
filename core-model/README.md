@@ -1,0 +1,190 @@
+# **PRISM Core-Model**
+
+> Движок вычислений, CLI-утилита и контрактная модель данных  
+> (уровни *Blueprint ↔ Load Profile ↔ Sizing Result*).
+
+---
+
+## 1. Назначение модуля
+
+* **Принимает**:  
+  * YAML-Blueprint-ы команд (`*.blueprint.yaml`)  
+  * YAML/JSON load-profile с нагрузочными параметрами
+* **Вычисляет** ресурсы (CPU/RAM/Storage/…) для всех сервисов и инфраструктуры
+* **Возвращает**:
+  * JSON-объект сайзинга (может быть скормлен адаптерам XLSX/PDF)
+  * в будущем — gRPC API для **service**-модуля
+
+---
+
+## 2. Быстрый старт (локальный)
+
+```bash
+# клонируем монорепу и переходим
+git clone https://github.com/bims/prism.git
+cd prism
+
+# создаём виртуальное окружение
+py -3.12 -m venv .venv
+.venv\Scripts\activate        # Windows PowerShell
+
+# ставим зависимости core-model
+pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
+```
+
+Проверяем:
+
+```bash
+# справка CLI
+python -m bims.prism.cli --help
+
+# smoke-тесты
+pytest -m unit
+```
+
+---
+
+## 3. Структура каталога `core-model`
+
+```text
+core-model/
+├─ src/
+│  └─ bims/
+│      └─ prism/
+│          ├─ cli.py            # Typer-CLI (entrypoint)
+│          ├─ eval.py           # mini-eval (asteval wrapper)
+│          ├─ models/
+│          │   ├─ blueprint.py
+│          │   ├─ load_profile.py
+│          │   └─ sizing_result.py
+│          └─ schemas/
+│              └─ load_profile.schema.json
+├─ tests/
+│  ├─ unit/
+│  └─ integration/
+├─ requirements.txt
+├─ requirements_dev.txt
+├─ pytest.ini
+└─ README.md      ← **этот файл**
+```
+
+### Зачем `src/`
+Изоляция исходников от метаданных; IDE автоматически добавит его в PYTHONPATH.
+
+---
+
+## 4. Мини-движок формул (`eval.py`)
+
+* Основан на **asteval** (Python-safe подсетевой интерпретатор).
+* Белый список функций (`ceil`, `min`, `max`, …​) задаётся в `_WHITELIST`.
+* В будущем будет расширен для кавычек (`"128Mi" → bytes`) и агрегаций.
+
+---
+
+## 5. CLI `prism-cli`
+
+```bash
+usage: prism-cli calculate [OPTIONS] BLUEPRINT_PATH LOAD_PATH
+
+Arguments:
+  BLUEPRINT_PATH  *.blueprint.yaml
+  LOAD_PATH       load_profile.(yaml|json)
+
+Options:
+  --json-out FILE  файл, куда сохранить результат (иначе вывод в stdout)
+  --help           Show this message and exit.
+```
+
+Пример:
+
+```bash
+python -m bims.prism.cli calculate ^
+  blueprints\core_team.blueprint.yaml ^
+  examples\load_profile.yaml ^
+  --json-out out\result.json
+```
+
+---
+
+## 6. Разработка
+
+### 6.1 Проверка качества
+
+| Команда                       | Что делает                               |
+|-------------------------------|------------------------------------------|
+| `ruff src tests`             | быстрый линт + авто-импорт               |
+| `black src tests`            | автоформатирование                       |
+| `mypy src`                   | статический анализ типов (Pydantic v2)   |
+| `pytest -m unit`             | юнит-тесты                               |
+| `pytest -m integration`      | медленные e2e / I/O тесты                |
+| `pytest --cov`               | покрытие                                 |
+| `pre-commit run --all`       | локальный запуск всех хуков              |
+
+> **Совет:** `pre-commit install` — линтер и black проверятся при каждом `git commit`.
+
+### 6.2 Стандарты кода
+
+* **Conventional Commits** (`feat:`, `fix:`, `chore:` …​)
+* **Black + Ruff** — единственный форматтер/линтер
+* Type hints обязательны в публичных API (`models/*.py`, `eval.py`)
+
+---
+
+## 7. Зависимости
+
+| Категория | Пакет | Версия | Причина пина |
+|-----------|-------|--------|--------------|
+| Runtime   | pydantic | 2.7.1 | модели данных |
+| Runtime   | PyYAML  | 6.0.2 | парсинг YAML  |
+| Runtime   | typer   | 0.12.3 | CLI           |
+| Runtime   | asteval | 0.9.31 | движок формул |
+| Runtime   | **click** | **8.1.7** | ⬅ фикс на 8.2+ (incompatible with Typer) |
+| Dev       | pytest / pytest-cov | 8.3.1 / 5.0.0 | тесты + покрытие |
+| Dev       | ruff, black, mypy, pre-commit | см. `requirements_dev.txt` | стиль / типы |
+
+---
+
+## 8. Запуск тестов в CI
+
+`.github/workflows/core-model.yml`
+
+```yaml
+name: core-model
+on:
+  push:
+    paths: ["core-model/**", ".github/workflows/core-model.yml"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
+      - run: ruff core-model/src core-model/tests
+      - run: pytest core-model/tests -m "unit or integration" --cov=bims.prism
+```
+
+---
+
+## 9. Как расширять
+
+| Что нужно | Куда писать | Tips |
+|-----------|-------------|------|
+| Новое поле Load Profile | `models/load_profile.py` + `load_profile.schema.json` | дополняем `typing.Annotated` для единиц измерения |
+| Новое правило формулы   | `eval.py` или отдельный `evaluator/*.py` | добавьте в `_WHITELIST` или передайте через `Interpreter.symtable` |
+| gRPC API                | `api/proto/*.proto` → `buf generate`     | затем adapter layer в `grpc_server.py` |
+
+---
+
+## 10. Дорожная карта Core-Model (выжимка)
+
+| Версия | Ключевые фичи |
+|--------|---------------|
+| **0.1** | Pydantic-схемы, CLI, mini-eval, 80 % формул |
+| **0.2** | XLSX-Adapter интеграция, golden-snapshot-тесты |
+| **0.4** | gRPC-server + health-probe |
+| **1.0** | Helm-chart, prod-ready CPU ≤ 30 c/report |
+
+Полная Roadmap: `docs/roadmap.md`.

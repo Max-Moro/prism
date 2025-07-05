@@ -1,0 +1,39 @@
+# ────────── OS / IDE ──────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ────────── Python ──────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+env/
+build/
+dist/
+.eggs/
+*.egg-info/
+.coverage
+htmlcov/
+
+# ────────── Node / SPA ────────
+spa/node_modules/
+npm-debug.log*
+pnpm-lock.yaml
+yarn.lock
+
+# ────────── Java / Maven ──────
+service/**/target/
+*.class
+*.jar
+*.war
+
+# ────────── Docker / CI ───────
+*.log
+docker-compose.override.yml
+
+# ────────── Misc ──────────────
+*.swp
+*.swo

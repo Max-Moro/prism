@@ -24,18 +24,18 @@
 │   └── report/         # Jinja2 + WeasyPrint шаблоны
 ├── core-model/         # Движок формул (Python, Pydantic)
 ├── service/            # Spring Boot REST API для админ‑панели
-├── spi/                # React + TypeScript SPA (Ant Design)
+├── spa/                # React + TypeScript SPA (Ant Design)
 ├── infra/              # Dev/CI окружение (docker‑compose, helm)
 └── docs/               # MkDocs, ADR, диаграммы архитектуры
 ```
 
 | Модуль              | Язык / Рантайм | Основные зависимости              |
-| ------------------- | -------------- | --------------------------------- |
+|---------------------| -------------- | --------------------------------- |
 | **core-model**      | Python 3.12    | Pydantic v2, PyYAML               |
 | **adapters/xlsx**   | Python 3.12    | pandas, openpyxl                  |
 | **adapters/report** | Python 3.12    | Jinja2, WeasyPrint                |
 | **service**         | Java 21        | Spring Boot 3, JPA, PostgreSQL 16 |
-| **spi**             | TypeScript 5   | React 18, MobX 6, Ant Design 5    |
+| **spa**             | TypeScript 5   | React 18, MobX 6, Ant Design 5    |
 
 ### Примеры namespace
 
