@@ -1,0 +1,7 @@
+online_users: 500
+total_users: 2000
+rps: 120
+rps_p95: 100
+jobs_rate: 20
+structured_data_gb: 50
+unstructured_data_gb: 300

@@ -1,0 +1,7 @@
+{
+  "services": {
+    "api":    { "cpu_cores": 0.03,  "memory_bytes": 93323264 },
+    "worker": { "cpu_cores": 0.1,   "memory_bytes": 268435456 }
+  },
+  "totals": { "cpu": 0.13, "memory": 361758720 }
+}
