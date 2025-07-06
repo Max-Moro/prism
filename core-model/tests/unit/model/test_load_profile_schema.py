@@ -3,7 +3,7 @@ import yaml
 
 from bims.prism.models import LoadProfile
 
-
+@pytest.mark.unit
 def test_load_profile_schema_ok(tmp_path):
     sample = {
         "online_users": 500,
@@ -20,7 +20,7 @@ def test_load_profile_schema_ok(tmp_path):
     lp = LoadProfile.parse_file(f)
     assert lp.online_users == 500
 
-
+@pytest.mark.unit
 def test_load_profile_schema_typo(tmp_path):
     bad = { "onlne_users": 10 }  # typo!
     f = tmp_path / "bad.yaml"

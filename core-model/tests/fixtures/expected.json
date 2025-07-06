@@ -1,7 +1,16 @@
 {
   "services": {
-    "api":    { "cpu_cores": 0.03,  "memory_bytes": 93323264 },
-    "worker": { "cpu_cores": 0.1,   "memory_bytes": 268435456 }
+    "api": {
+      "requests": { "cpu_cores": 0.03, "memory_bytes": 93323264 },
+      "limits":   { "cpu_cores": 0.06, "memory_bytes": 140509184 }
+    },
+    "worker": {
+      "requests": { "cpu_cores": 0.1,  "memory_bytes": 268435456 },
+      "limits":   { "cpu_cores": 0.3,  "memory_bytes": 536870912 }
+    }
   },
-  "totals": { "cpu": 0.13, "memory": 361758720 }
+  "totals": {
+    "requests": { "cpu": 0.13, "memory": 361758720 },
+    "limits":   { "cpu": 0.36, "memory": 677380096 }
+  }
 }

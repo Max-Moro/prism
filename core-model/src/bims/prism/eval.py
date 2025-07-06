@@ -40,37 +40,63 @@ class MiniEvalEngine:
         expr_norm = _subst_units(expr)
         return self._ae(expr_norm)
 
+    def _eval_block(self, block: dict[str, str], dyn: bool) -> tuple[float, float]:
+        """
+        Возвращает (cpu, mem) — cpu в *ядрах*, memory в *байтах*.
+        """
+        if dyn:
+            cpu = self.eval(block["cpu"])
+            mem = self.eval(block["memory"])
+        else:
+            cpu = parse_quantity(block["cpu"])
+            mem = parse_quantity(block["memory"])
+        return cpu, mem
+
     def run(self) -> SizingResult:
-        from .models import SizingResult  # локальный импорт, чтобы избежать циклов
+        result = {
+            "services": {},
+            "totals": {
+                "requests": {"cpu": 0.0, "memory": 0.0},
+                "limits": {"cpu": 0.0, "memory": 0.0},
+            },
+        }
 
-        result = {"services": {}, "totals": {"cpu": 0.0, "memory": 0.0}}
-
-        for bp in self.bp:                            # список/итератор Blueprint-ов
+        for bp in self.bp:
             for name, svc in bp.technical_services.items():
-                profile_ref = svc["resources"]["profile"]
-                if profile_ref.endswith("@dyn"):
-                    profile_name = profile_ref.replace("@dyn", "")
-                    section = "dynamic"
-                else:
-                    profile_name = profile_ref
-                    section = "static"
+                prof_ref = svc["resources"]["profile"]
+                dyn = prof_ref.endswith("@dyn")
+                prof_name = prof_ref.replace("@dyn", "")
 
-                prof = bp.resource_profiles[profile_name][section]["requests"]
+                prof = bp.resource_profiles[prof_name]
 
-                # --- CPU --------------------------------------------------
-                if section == "dynamic":
-                    cpu = self.eval(prof["cpu"])
-                    mem = self.eval(prof["memory"])
-                else:                           # static
-                    cpu = parse_quantity(prof["cpu"])
-                    mem = parse_quantity(prof["memory"])
+                # ---------- requests ----------
+                req_block = (prof["dynamic" if dyn else "static"]["requests"])
+                req_cpu, req_mem = self._eval_block(req_block, dyn)
 
-                result["services"][name] = {
-                    "cpu_cores":     cpu,
-                    "memory_bytes":  mem,
+                # ---------- limits (optional) ----------
+                lim_cpu, lim_mem = None, None
+                limits_present = "limits" in prof["dynamic" if dyn else "static"]
+                if limits_present:
+                    lim_block = (prof["dynamic" if dyn else "static"]["limits"])
+                    lim_cpu, lim_mem = self._eval_block(lim_block, dyn)
+
+                # ---------- записываем ----------
+                svc_entry = {
+                    "requests": {"cpu_cores": req_cpu, "memory_bytes": req_mem},
                 }
-                result["totals"]["cpu"]    += cpu
-                result["totals"]["memory"] += mem
+                if limits_present:
+                    svc_entry["limits"] = {
+                        "cpu_cores": lim_cpu,
+                        "memory_bytes": lim_mem,
+                    }
+                result["services"][name] = svc_entry
+
+                # ---------- агрегаты ----------
+                result["totals"]["requests"]["cpu"] += req_cpu
+                result["totals"]["requests"]["memory"] += req_mem
+                if limits_present:
+                    result["totals"]["limits"]["cpu"] += lim_cpu
+                    result["totals"]["limits"]["memory"] += lim_mem
 
         return SizingResult(details=result)
 
