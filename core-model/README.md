@@ -12,10 +12,14 @@
     включённые BusinessModule.  
   * Каталог или набор `Blueprint`-ов (`*.blueprint.yaml`) — формулы и граф зависимостей
     всех команд.
-* **Вычисляет** ресурсы (CPU/RAM/Storage/…) для всех сервисов и инфраструктуры
+* **Вычисляет** ресурсы (CPU/RAM/Storage GB/…) для:
+  * всех Technical / Generic сервисов,
+  * их зависимостей **Infrastructure** (PostgreSQL, Kafka и др.),
+  * каждой **зоны** проекта (Prod, Test, DR …).
 * **Возвращает**:
-  * JSON-объект сайзинга (может быть скормлен адаптерам XLSX/PDF)
-  * в будущем — gRPC API для **service**-модуля
+  * JSON-объект сайзинга вида  
+    `{ zones: { Prod: {...}, Test: {...} }, totals: {...} }`
+  * (roadmap v0.5) gRPC API для **service**-модуля
 
 ---
 
@@ -54,13 +58,16 @@ core-model/
 │  └─ bims/
 │      └─ prism/
 │          ├─ cli.py            # Typer-CLI (entrypoint)
-│          ├─ eval.py           # mini-eval (asteval wrapper)
+│          ├─ eval.py           # MiniEvalEngine (asteval-based)
+│          ├─ units.py          # parse_quantity / human-units
+│          ├─ graph.py          # BlueprintIndex + DFS
 │          ├─ models/
 │          │   ├─ blueprint.py
 │          │   ├─ load_profile.py
 │          │   └─ sizing_result.py
 │          └─ schemas/
 │              └─ load_profile.schema.json
+│              └─ project.schema.json
 ├─ tests/
 │  ├─ unit/
 │  └─ integration/
@@ -79,7 +86,9 @@ core-model/
 
 * Основан на **asteval** (Python-safe подсетевой интерпретатор).
 * Белый список функций (`ceil`, `min`, `max`, …​) задаётся в `_WHITELIST`.
-* В будущем будет расширен для кавычек (`"128Mi" → bytes`) и агрегаций.
+* Уже поддерживает «кавычки-единицы» (`"128Mi" → bytes`, `"150m" → cores`),
+  динамические выражения `0.02 + 0.00002 * online_users`,
+  requests / limits и рекурсивные `depends_on`.
 
 ---
 
@@ -118,7 +127,7 @@ python -m bims.prism.cli calculate ^
 | `black src tests`            | автоформатирование                       |
 | `mypy src`                   | статический анализ типов (Pydantic v2)   |
 | `pytest -m unit`             | юнит-тесты                               |
-| `pytest -m integration`      | медленные e2e / I/O тесты                |
+| `pytest -m integration`      | e2e / I-O / CLI-smoke                    |
 | `pytest --cov`               | покрытие                                 |
 | `pre-commit run --all`       | локальный запуск всех хуков              |
 
@@ -134,15 +143,16 @@ python -m bims.prism.cli calculate ^
 
 ## 7. Зависимости
 
-| Категория | Пакет | Версия | Причина пина |
-|-----------|-------|--------|--------------|
-| Runtime   | pydantic | 2.7.1 | модели данных |
-| Runtime   | PyYAML  | 6.0.2 | парсинг YAML  |
-| Runtime   | typer   | 0.12.3 | CLI           |
-| Runtime   | asteval | 0.9.31 | движок формул |
-| Runtime   | **click** | **8.1.7** | ⬅ фикс на 8.2+ (incompatible with Typer) |
-| Dev       | pytest / pytest-cov | 8.3.1 / 5.0.0 | тесты + покрытие |
-| Dev       | ruff, black, mypy, pre-commit | см. `requirements_dev.txt` | стиль / типы |
+| Категория | Пакет                         | Версия                     | Причина пина                             |
+|-----------|-------------------------------|----------------------------|------------------------------------------|
+| Runtime   | pydantic                      | 2.7.1                      | модели данных                            |
+| Runtime   | PyYAML                        | 6.0.2                      | парсинг YAML                             |
+| Runtime   | typer                         | 0.12.3                     | CLI                                      |
+| Runtime   | asteval                       | 0.9.31                     | движок формул                            |
+| Runtime   | jsonschema                    | 4.22                       | валидация Project/Load Profile           |
+| Runtime   | **click**                     | **8.1.7**                  | ⬅ фикс на 8.2+ (incompatible with Typer) |
+| Dev       | pytest / pytest-cov           | 8.3.1 / 5.0.0              | тесты + покрытие                         |
+| Dev       | ruff, black, mypy, pre-commit | см. `requirements_dev.txt` | стиль / типы                             |
 
 ---
 
@@ -165,6 +175,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
       - run: ruff core-model/src core-model/tests
+      - run: black --check core-model/src core-model/tests
       - run: pytest core-model/tests -m "unit or integration" --cov=bims.prism
 ```
 
@@ -172,11 +183,12 @@ jobs:
 
 ## 9. Как расширять
 
-| Что нужно | Куда писать | Tips |
-|-----------|-------------|------|
-| Новое поле Load Profile | `models/load_profile.py` + `load_profile.schema.json` | дополняем `typing.Annotated` для единиц измерения |
-| Новое правило формулы   | `eval.py` или отдельный `evaluator/*.py` | добавьте в `_WHITELIST` или передайте через `Interpreter.symtable` |
-| gRPC API                | `api/proto/*.proto` → `buf generate`     | затем adapter layer в `grpc_server.py` |
+| Что нужно | Куда писать                                           | Tips                                                                 |
+|-----------|-------------------------------------------------------|----------------------------------------------------------------------|
+| Новое поле Load Profile | `models/load_profile.py` + `load_profile.schema.json` | не забудьте обновить `Project.schema.json`, `fixtures/` и unit-тесты |
+| Новое правило формулы   | `eval.py` или отдельный `evaluator/*.py`              | добавьте в `_WHITELIST` или передайте через `Interpreter.symtable`   |
+| Новый тип единиц (IOPS) | `units.py`                                            | добавить в `_UNIT_TOKEN` и `_MULTIPLIER`                             |
+| gRPC API                | `api/proto/*.proto` → `buf generate`                  | затем adapter layer в `grpc_server.py`                               |
 
 ---
 
