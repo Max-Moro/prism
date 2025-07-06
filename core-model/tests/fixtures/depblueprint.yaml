@@ -2,6 +2,11 @@ kind: Blueprint
 team: demo
 version: 0.2.0
 
+business_modules:
+  inspection:
+    title: "Inspection"
+    services: [api]
+
 technical_services:
   api:
     image: demo/api:1.0

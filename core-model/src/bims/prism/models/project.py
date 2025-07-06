@@ -1,16 +1,30 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-import json
 import yaml
-from jsonschema import validate, ValidationError
+from jsonschema import Draft202012Validator, ValidationError
 from pydantic import BaseModel, ConfigDict, Field
+from referencing import Registry, Resource
 
+# --- load both schemas once ------------------------------------------------
 _SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schemas" / "project.schema.json"
 with _SCHEMA_PATH.open(encoding="utf-8") as _fh:
     _PROJECT_SCHEMA = json.load(_fh)
+
+# load_profile schema (already loaded in LoadProfile module, reuse)
+from .load_profile import _LOAD_SCHEMA   # noqa: WPS433
+
+# registry «URL → объект» для резолвера
+_SCHEMA_REGISTRY = (
+    Registry()
+    .with_resources([
+        (_PROJECT_SCHEMA["$id"], Resource.from_contents(_PROJECT_SCHEMA)),
+        (_LOAD_SCHEMA["$id"],    Resource.from_contents(_LOAD_SCHEMA)),
+    ])
+)
 
 # --- Pydantic -------------------------------------------------------------
 class Zone(BaseModel):
@@ -30,7 +44,10 @@ class Project(BaseModel):
     # ---------------------------------------------------------- helpers ----
     @classmethod
     def _validate_jsonschema(cls, data: Dict[str, Any]) -> None:
-        validate(instance=data, schema=_PROJECT_SCHEMA)
+        Draft202012Validator(
+            schema=_PROJECT_SCHEMA,
+            registry=_SCHEMA_REGISTRY,      # ⬅ локальный кэш
+        ).validate(instance=data)
 
     @classmethod
     def parse_file(cls, path: str | Path) -> "Project":
@@ -44,10 +61,11 @@ class Project(BaseModel):
             raise ValueError(f"Project schema validation failed: {e.message}") from e
 
         # импорт здесь, чтобы избежать циклов
-        from .load_profile import LoadProfile  # noqa: WPS433
 
         return cls.model_validate(raw)
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:  # пирует поздний импорт
-    from .load_profile import LoadProfile
+# «живой» импорт, а не только TYPE_CHECKING
+from .load_profile import LoadProfile  # noqa: WPS433
+
+Zone.model_rebuild()
+Project.model_rebuild()
