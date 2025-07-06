@@ -176,7 +176,34 @@ class MiniEvalEngine:
         for root in roots:
             walk(root, "technical")
 
+        # ──────────────────────────── применяем multiplier
+        factor = getattr(zone, "factor", 1) or 1
+        if factor != 1:
+            self._scale_zone(result, factor)
         return result
+
+    # -----------------------------------------------------------------
+    def _scale_zone(self, res: dict, k: float) -> None:
+        """Умножает все числовые значения внутри зоны на коэффициент k."""
+
+        def _mul(v):
+            return v * k if isinstance(v, (int, float)) else v
+
+        # services & generic
+        for bucket in ("services", "generic_services"):
+            for srv in res[bucket].values():
+                for section in ("requests", "limits"):
+                    for res_name, val in srv[section].items():
+                        srv[section][res_name] = _mul(val)
+
+        # infra capacity
+        for infra in res["infra"].values():
+            infra["capacity"] = {k2: _mul(v2) for k2, v2 in infra["capacity"].items()}
+
+        # totals
+        for section in ("requests", "limits"):
+            for res_name, val in res["totals"][section].items():
+                res["totals"][section][res_name] = _mul(val)
 
     # ------------------------------------------------ public run ----------
     def run(self) -> SizingResult:

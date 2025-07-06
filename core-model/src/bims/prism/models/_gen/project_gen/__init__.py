@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Extra, Field
 
@@ -16,6 +16,11 @@ class Zone(BaseModel):
 
     name: str
     enabled_modules: List[str] = Field(..., min_items=1)
+    factor: Optional[float] = Field(
+        1,
+        description="Мультипликатор зоны (>=1). 1 — поведение без изменений.",
+        ge=1.0,
+    )
     load_profile: load_profile_1.Schema
 
 

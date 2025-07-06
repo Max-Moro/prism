@@ -20,6 +20,12 @@
             "minItems": 1,
             "items": { "type": "string" }
           },
+          "factor": {
+            "type": "number",
+            "description": "Мультипликатор зоны (>=1). 1 — поведение без изменений.",
+            "minimum": 1,
+            "default": 1
+          },
           "load_profile": { "$ref": "load_profile.schema.json" }
         }
       }
