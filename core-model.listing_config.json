@@ -17,9 +17,11 @@
     "core-model.roadmap.listing_config.json",
 
     "blueprints/",
+    "examples/",
     "docs/",
     "README.md",
 
-    "core-model/ROADMAP.md"
+    "core-model/ROADMAP.md",
+    "core-model/src/bims/prism/models/_gen/"
   ]
 }

@@ -13,6 +13,7 @@
     "core-model.listing_config.json",
     "core-model.roadmap.listing_config.json",
 
-    "core-model/"
+    "core-model/",
+    "examples/"
   ]
 }

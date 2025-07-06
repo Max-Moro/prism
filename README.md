@@ -97,6 +97,7 @@
 * [Архитектурный обзор](docs/architecture_overview.md)
 * [Дорожная карта](docs/roadmap.md)
 * [DSL «PRISM Blueprint»](docs/blueprint_dsl.md)
+* [Архитектура отчётных провайдеров PRISM](docs/adapters_report_architecture.md)
 
 ---
 

@@ -14,11 +14,13 @@
     "core-model.roadmap.listing_config.json",
 
     "blueprints/",
+    "examples/",
     "docs/",
     "README.md",
 
     "core-model/src/",
     "core-model/tests/",
-    "core-model/README.md"
+    "core-model/README.md",
+    "core-model/src/bims/prism/models/_gen/"
   ]
 }
