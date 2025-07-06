@@ -36,6 +36,8 @@ class MiniEvalEngine:
         # все переменные из LoadProfile сразу кладём в символьную таблицу
         self._ae.symtable.update(load_profile.model_dump())
 
+        self._visited = set()  # имена уже посчитанных service/infra
+
     def eval(self, expr: str) -> Any:
         expr_norm = _subst_units(expr)
         return self._ae(expr_norm)
@@ -52,9 +54,71 @@ class MiniEvalEngine:
             mem = parse_quantity(block["memory"])
         return cpu, mem
 
+    def _walk_dep(self, bp, name, kind):
+        """
+        kind = 'technical' | 'generic'
+        """
+        if name in self._visited:
+            return
+        self._visited.add(name)
+
+        # --- technical / generic ------------------------------------------
+        if kind in ("technical", "generic"):
+            src = (bp.technical_services if kind == "technical"
+                   else bp.generic_services)[name]
+            profile_ref = src["resources"]["profile"]
+            dyn = profile_ref.endswith("@dyn")
+            prof_name = profile_ref.replace("@dyn", "")
+            prof = bp.resource_profiles[prof_name]
+
+            req_cpu, req_mem = self._eval_block(
+                prof["dynamic" if dyn else "static"]["requests"], dyn
+            )
+            lim_cpu, lim_mem = (0, 0)
+            lims = prof["dynamic" if dyn else "static"].get("limits")
+            if lims:
+                lim_cpu, lim_mem = self._eval_block(lims, dyn)
+
+            bucket = "services" if kind == "technical" else "generic_services"
+            self._result[bucket][name] = {
+                "requests": {"cpu_cores": req_cpu, "memory_bytes": req_mem},
+                "limits": {"cpu_cores": lim_cpu, "memory_bytes": lim_mem},
+            }
+            self._result["totals"]["requests"]["cpu"] += req_cpu
+            self._result["totals"]["requests"]["memory"] += req_mem
+            self._result["totals"]["limits"]["cpu"] += lim_cpu
+            self._result["totals"]["limits"]["memory"] += lim_mem
+
+            # --- рекурсивно идём по зависимостям ---------------------------
+            for dep in src.get("depends_on", []):
+                if dep in bp.generic_services:
+                    self._walk_dep(bp, dep, "generic")
+                elif dep in bp.infra_dependencies:
+                    self._visit_infra(bp, dep)
+                else:
+                    raise KeyError(f"Unknown dependency: {dep}")
+
+    def _visit_infra(self, bp, name):
+        if name in self._visited:
+            return
+        self._visited.add(name)
+
+        infra = bp.infra_dependencies[name]
+        cap = {}
+        for k, expr in infra.get("capacity", {}).items():
+            cap[k] = self.eval(expr) if isinstance(expr, str) else expr
+
+        self._result["infra"][name] = {
+            "type": infra["type"],
+            "version": infra.get("version"),
+            "capacity": cap,
+        }
+
     def run(self) -> SizingResult:
-        result = {
+        self._result = {
             "services": {},
+            "generic_services": {},
+            "infra": {},
             "totals": {
                 "requests": {"cpu": 0.0, "memory": 0.0},
                 "limits": {"cpu": 0.0, "memory": 0.0},
@@ -62,41 +126,8 @@ class MiniEvalEngine:
         }
 
         for bp in self.bp:
-            for name, svc in bp.technical_services.items():
-                prof_ref = svc["resources"]["profile"]
-                dyn = prof_ref.endswith("@dyn")
-                prof_name = prof_ref.replace("@dyn", "")
+            for root in bp.technical_services.keys():
+                self._walk_dep(bp, root, "technical")
 
-                prof = bp.resource_profiles[prof_name]
-
-                # ---------- requests ----------
-                req_block = (prof["dynamic" if dyn else "static"]["requests"])
-                req_cpu, req_mem = self._eval_block(req_block, dyn)
-
-                # ---------- limits (optional) ----------
-                lim_cpu, lim_mem = None, None
-                limits_present = "limits" in prof["dynamic" if dyn else "static"]
-                if limits_present:
-                    lim_block = (prof["dynamic" if dyn else "static"]["limits"])
-                    lim_cpu, lim_mem = self._eval_block(lim_block, dyn)
-
-                # ---------- записываем ----------
-                svc_entry = {
-                    "requests": {"cpu_cores": req_cpu, "memory_bytes": req_mem},
-                }
-                if limits_present:
-                    svc_entry["limits"] = {
-                        "cpu_cores": lim_cpu,
-                        "memory_bytes": lim_mem,
-                    }
-                result["services"][name] = svc_entry
-
-                # ---------- агрегаты ----------
-                result["totals"]["requests"]["cpu"] += req_cpu
-                result["totals"]["requests"]["memory"] += req_mem
-                if limits_present:
-                    result["totals"]["limits"]["cpu"] += lim_cpu
-                    result["totals"]["limits"]["memory"] += lim_mem
-
-        return SizingResult(details=result)
+        return SizingResult(details=self._result)
 

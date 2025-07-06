@@ -1,0 +1,33 @@
+kind: Blueprint
+team: demo
+version: 0.2.0
+
+technical_services:
+  api:
+    image: demo/api:1.0
+    resources: { profile: xsmall-web@dyn }
+    depends_on: [notification, postgres-primary]
+
+generic_services:
+  notification:
+    image: demo/notify:1.0
+    resources: { profile: xsmall-web }
+
+infra_dependencies:
+  postgres-primary:
+    type: postgres
+    version: "16"
+    capacity: { storage_gb: "10 + 0.005 * structured_data_gb" }
+
+resource_profiles:
+  xsmall-web:
+    static:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits:   { cpu: "150m", memory: "256Mi" }
+    dynamic:
+      requests:
+        cpu:    "0.02 + 0.00002 * online_users"
+        memory: "64Mi + 0.05Mi * online_users"
+      limits:
+        cpu:    "0.06 + 0.00006 * online_users"
+        memory: "128Mi + 0.08Mi * online_users"
