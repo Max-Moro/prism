@@ -69,6 +69,15 @@
    make test           # pytest + mvn + vitest
    ```
 
+5. **Smoke-пример** (готовая связка YAML → JSON):
+
+   ```bash
+   cd core-model/src
+   python -m bims.prism.cli ../../examples/acme.project.yaml ../../examples/blueprints/ \
+     | jq '.totals'
+   ```
+   Файл `examples/README.md` описывает все шаги подробнее.
+
 ---
 
 ## 4  Рабочий процесс

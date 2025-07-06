@@ -1,0 +1,10 @@
+$ cd core-model/src
+$ python -m bims.prism.cli calculate examples/acme.project.yaml examples/blueprints/
+{
+  "zones": {
+    "Prod": { … объект на ~30 строк… },
+    "Test": { … }
+  },
+  "totals": { … },
+  "infra_totals": { … }
+}

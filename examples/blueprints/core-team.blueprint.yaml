@@ -1,0 +1,39 @@
+kind: Blueprint
+team: demo
+version: 0.1.0
+
+business_modules:
+  inspection:
+    title: "Инспекции"
+    services: [api]
+
+technical_services:
+  api:
+    image: registry.demo/inspection-api:0.1
+    resources: { profile: xsmall-web@dyn }
+    depends_on: [notification, postgres-primary]
+
+generic_services:
+  notification:
+    image: registry.demo/notify:0.1
+    resources: { profile: xsmall-web }
+
+infra_dependencies:
+  postgres-primary:
+    type: postgres
+    version: "16"
+    capacity:
+      storage_gb: "10 + 0.005 * structured_data_gb"
+
+resource_profiles:
+  xsmall-web:
+    static:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits:   { cpu: "150m", memory: "256Mi" }
+    dynamic:
+      requests:
+        cpu:    "0.02 + 0.00002 * online_users"
+        memory: "64Mi + 0.05Mi * online_users"
+      limits:
+        cpu:    "0.06 + 0.00006 * online_users"
+        memory: "128Mi + 0.08Mi * online_users"

@@ -1,0 +1,110 @@
+{
+  "zones": {
+    "Prod": {
+      "services": {
+        "api": {
+          "requests": {
+            "cpu_cores": 0.07,
+            "memory_bytes": 198180864.0
+          },
+          "limits": {
+            "cpu_cores": 0.21,
+            "memory_bytes": 343932928.0
+          }
+        }
+      },
+      "generic_services": {
+        "notification": {
+          "requests": {
+            "cpu_cores": 0.05,
+            "memory_bytes": 134217728.0
+          },
+          "limits": {
+            "cpu_cores": 0.15,
+            "memory_bytes": 268435456.0
+          }
+        }
+      },
+      "infra": {
+        "postgres-primary": {
+          "type": "postgres",
+          "version": "16",
+          "capacity": {
+            "storage_gb": 11.9
+          }
+        }
+      },
+      "totals": {
+        "requests": {
+          "cpu": 0.12000000000000001,
+          "memory": 332398592.0
+        },
+        "limits": {
+          "cpu": 0.36,
+          "memory": 612368384.0
+        }
+      }
+    },
+    "Test": {
+      "services": {
+        "api": {
+          "requests": {
+            "cpu_cores": 0.022,
+            "memory_bytes": 72351744.0
+          },
+          "limits": {
+            "cpu_cores": 0.066,
+            "memory_bytes": 142606336.0
+          }
+        }
+      },
+      "generic_services": {
+        "notification": {
+          "requests": {
+            "cpu_cores": 0.05,
+            "memory_bytes": 134217728.0
+          },
+          "limits": {
+            "cpu_cores": 0.15,
+            "memory_bytes": 268435456.0
+          }
+        }
+      },
+      "infra": {
+        "postgres-primary": {
+          "type": "postgres",
+          "version": "16",
+          "capacity": {
+            "storage_gb": 10.1
+          }
+        }
+      },
+      "totals": {
+        "requests": {
+          "cpu": 0.07200000000000001,
+          "memory": 206569472.0
+        },
+        "limits": {
+          "cpu": 0.216,
+          "memory": 411041792.0
+        }
+      }
+    }
+  },
+  "totals": {
+    "requests": {
+      "cpu": 0.192,
+      "memory": 538968064.0
+    },
+    "limits": {
+      "cpu": 0.576,
+      "memory": 1023410176.0
+    }
+  },
+  "infra_totals": {
+    "postgres": {
+      "storage_gb": 22.0
+    }
+  },
+  "warnings": null
+}

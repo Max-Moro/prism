@@ -1,0 +1,21 @@
+customer: "ACME Construction Ltd."
+zones:
+  - name: Prod
+    enabled_modules: [inspection]
+    load_profile:
+      online_users:         2500
+      total_users:          12000
+      rps:                  180
+      rps_p95:              150
+      structured_data_gb:   380
+      unstructured_data_gb: 520
+
+  - name: Test
+    enabled_modules: [inspection]
+    load_profile:
+      online_users:         100
+      total_users:          400
+      rps:                  10
+      rps_p95:              8
+      structured_data_gb:   20
+      unstructured_data_gb: 30

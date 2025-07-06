@@ -37,7 +37,7 @@ def calculate(
     if json_out:
         json_out.write_text(result.model_dump_json(indent=2))
     else:
-        typer.echo(result.json(indent=2))
+        typer.echo(result.model_dump_json(indent=2))
 
 if __name__ == "__main__":
     app()
