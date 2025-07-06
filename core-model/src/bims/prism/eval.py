@@ -1,5 +1,6 @@
 import math
 import re
+from typing import Any, Dict, DefaultDict
 
 from asteval import Interpreter
 
@@ -207,11 +208,12 @@ class MiniEvalEngine:
 
     # ------------------------------------------------ public run ----------
     def run(self) -> SizingResult:
-        zones_out = {}
+        zones_out: Dict[str, Dict[str, Any]] = {}
         totals = {
             "requests": {"cpu": 0.0, "memory": 0.0},
             "limits":   {"cpu": 0.0, "memory": 0.0},
         }
+        infra_totals: DefaultDict[str, Dict[str, float]] = DefaultDict(dict)
 
         for zone in self.project.zones:
             zres = self._run_zone(zone)
@@ -221,4 +223,18 @@ class MiniEvalEngine:
                 totals[t]["cpu"]    += zres["totals"][t]["cpu"]
                 totals[t]["memory"] += zres["totals"][t]["memory"]
 
-        return SizingResult(details={"zones": zones_out, "totals": totals})
+            # ───── aggreg. infra capacities across zones (🚀 NEW) ──────
+            for infra in zres["infra"].values():
+                itype = infra["type"]
+                for cap_key, cap_val in infra["capacity"].items():
+                    infra_totals[itype][cap_key] = (
+                        infra_totals[itype].get(cap_key, 0.0) + cap_val
+                    )
+
+        return SizingResult(
+            details={
+                "zones": zones_out,
+                "totals": totals,
+                "infra_totals": infra_totals,
+            }
+        )
