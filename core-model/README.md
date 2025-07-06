@@ -64,10 +64,15 @@ core-model/
 │          ├─ models/
 │          │   ├─ blueprint.py
 │          │   ├─ load_profile.py
-│          │   └─ sizing_result.py
+│          │   ├─ sizing_result.py
+│          │   └─ _gen/          # ← авто-сгенерированные Pydantic-классы
 │          └─ schemas/
-│              └─ load_profile.schema.json
-│              └─ project.schema.json
+│              ├─ load_profile.schema.json
+│              ├─ project.schema.json
+│              ├─ blueprint.schema.json
+│              └─ resource_profile.schema.json
+├─ scripts/
+│  └─ gen_models.py      # one-shot генерация моделей из JSON-Schema
 ├─ tests/
 │  ├─ unit/
 │  └─ integration/
@@ -129,6 +134,7 @@ python -m bims.prism.cli calculate ^
 | `pytest -m unit`             | юнит-тесты                               |
 | `pytest -m integration`      | e2e / I-O / CLI-smoke                    |
 | `pytest --cov`               | покрытие                                 |
+| `scripts/gen_models.py`      | пересгенерировать Pydantic модели        |
 | `pre-commit run --all`       | локальный запуск всех хуков              |
 
 > **Совет:** `pre-commit install` — линтер и black проверятся при каждом `git commit`.
@@ -153,6 +159,7 @@ python -m bims.prism.cli calculate ^
 | Runtime   | **click**                     | **8.1.7**                  | ⬅ фикс на 8.2+ (incompatible with Typer) |
 | Dev       | pytest / pytest-cov           | 8.3.1 / 5.0.0              | тесты + покрытие                         |
 | Dev       | ruff, black, mypy, pre-commit | см. `requirements_dev.txt` | стиль / типы                             |
+| Dev       | **datamodel-code-generator**  | 0.31.2                     | автоген строгих Pydantic моделей         |
 
 ---
 
@@ -176,6 +183,8 @@ jobs:
       - run: pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
       - run: ruff core-model/src core-model/tests
       - run: black --check core-model/src core-model/tests
+      # убедиться, что сгенерированные модели свежие
+      - run: python ./core-model/scripts/gen_models.py && git diff --exit-code
       - run: pytest core-model/tests -m "unit or integration" --cov=bims.prism
 ```
 
