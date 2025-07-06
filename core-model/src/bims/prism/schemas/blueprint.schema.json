@@ -30,7 +30,7 @@
     },
     "resource_profiles": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/definitions/ResourceProfile" }
+      "additionalProperties": { "$ref": "resource_profile.schema.json" }
     }
   },
   "definitions": {
@@ -89,8 +89,8 @@
         {
           "required": ["requests", "limits"],
           "properties": {
-            "requests": { "$ref": "#/definitions/ResourceLimit" },
-            "limits":   { "$ref": "#/definitions/ResourceLimit" }
+            "requests": { "$ref": "resource_profile.schema.json#/$defs/ResourceQuantity" },
+            "limits":   { "$ref": "resource_profile.schema.json#/$defs/ResourceQuantity" }
           },
           "additionalProperties": false
         }
@@ -99,44 +99,6 @@
     "Capacity": {
       "type": "object",
       "additionalProperties": { "type": "string" }
-    },
-    "ResourceProfile": {
-      "type": "object",
-      "properties": {
-        "static": {
-          "type": "object",
-          "properties": {
-            "requests": { "$ref": "#/definitions/ResourceLimit" },
-            "limits":   { "$ref": "#/definitions/ResourceLimit" }
-          }
-        },
-        "dynamic": {
-          "type": "object",
-          "properties": {
-            "requests": { "$ref": "#/definitions/ResourceFormula" },
-            "limits":   { "$ref": "#/definitions/ResourceFormula" }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "ResourceLimit": {
-      "type": "object",
-      "properties": {
-        "cpu":    { "type": "string" },
-        "memory": { "type": "string" }
-      },
-      "additionalProperties": false,
-      "required": ["cpu", "memory"]
-    },
-    "ResourceFormula": {
-      "type": "object",
-      "properties": {
-        "cpu":    { "type": "string" },
-        "memory": { "type": "string" }
-      },
-      "additionalProperties": false,
-      "required": ["cpu", "memory"]
     }
   }
 }

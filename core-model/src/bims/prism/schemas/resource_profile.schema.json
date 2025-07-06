@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bims.dev/prism/resource_profile.schema.json",
+  "title": "PRISM Resource Profile",
+  "description": "Статический или динамический шаблон ресурсов Pod’а Kubernetes.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "properties": {
+    "static": {
+      "type": "object",
+      "required": ["requests", "limits"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": { "$ref": "#/$defs/ResourceQuantity" },
+        "limits":   { "$ref": "#/$defs/ResourceQuantity" }
+      }
+    },
+
+    "dynamic": {
+      "type": "object",
+      "required": ["requests", "limits"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": { "$ref": "#/$defs/ResourceFormula" },
+        "limits":   { "$ref": "#/$defs/ResourceFormula" }
+      }
+    }
+  },
+
+  "$defs": {
+    "ResourceQuantity": {
+      "type": "object",
+      "required": ["cpu", "memory"],
+      "additionalProperties": false,
+      "properties": {
+        "cpu":    { "type": "string" },
+        "memory": { "type": "string" }
+      }
+    },
+
+    "ResourceFormula": {
+      "type": "object",
+      "required": ["cpu", "memory"],
+      "additionalProperties": false,
+      "properties": {
+        "cpu":    { "type": "string" },
+        "memory": { "type": "string" }
+      }
+    }
+  }
+}
