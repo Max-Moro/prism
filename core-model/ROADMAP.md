@@ -1,40 +1,43 @@
-# PRISM **Core-Model** – Roadmap
+# PRISM **Core-Model** – Roadmap  
 
-> **Ревизия:** 06 июл 2025
-> Файл ведётся внутри каталога `core-model` и обновляется в конце каждой итерации: строки из «Планируется» переносятся в «Сделано», при необходимости добавляются новые задачи.
-
----
-
-## Что **уже сделано** (v0.1-alpha, Sprint 0–1)
-
-| Блок                                  | Конкретные таски                                                                                                                                                                                     | Описание реализации / отличия от плана                                                                  |
-|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------------------------------------------------------------------------------------------------------- |
-| **Infrastructure / Project skeleton** | • Создан каталог `core-model` с layout `src/`, `tests/`, `requirements*`.<br>• Добавлен общий `.gitignore`.                                                                                          | Структура с `src/` отделяет исходники от метаданных; полностью совпадает с корпоративным шаблоном.      |
-| **CLI / Entry point**                 | • `cli.py` на Typer (команда `calculate`).                                                                                                                                                           | Ленивая загрузка моделей, поддержка `--json-out`; CLI пока выводит `NotImplementedError` внутри движка. |
-| **Data models (Pydantic)**            | • Заглушки `Blueprint`, `LoadProfile`, `SizingResult`.                                                                                                                                               | Пока `extra = "allow"`; `LoadProfile.parse_file` поддерживает обёртку `load_profile:`.                  |
-| **Mini‑Eval Engine**                  | • Шим над `asteval` с whitelist (`ceil`, `min`, `max`).                                                                                                                                              | Метод `.run()` пока не реализован – бросает `NotImplementedError`.                                      |
-| **Tooling & Dev‑Env**                 | • requirements (+ пин `click == 8.1.7`).<br>• `pytest.ini`, `ruff`, `black`, `pre-commit`.                                                                                                           | Пин Click устраняет несовместимость Typer ↔ Click >= 8.2.                                               |
-| **Documentation**                     | • Технический `README.md`.                                                                                                                                                                           | Подробный quick‑start, линтеры, CI‑шаблон.                                                              |
-| **Load Profile Schema**               | • Добавлен `schemas/load_profile.schema.json` (Draft‑2020‑12).<br>• В `LoadProfile.parse_file()` встроена валидация `jsonschema.validate()` **до** Pydantic.<br>• `extra="forbid"` включён в модели. | Раннее отлов опечаток и неверных типов; соответствие глоссарию; совместимость с unit‑тестами.           |
-| **Project Parser**                    | 1. JSON-Schema + модель `Project`, `Zone`.<br>2. CLI читает `*.sizing.yaml` вместо raw LoadProfile.                                                                                                  | Основа для работы по зонам и модулям. |
+> **Ревизия:** 06 июл 2025 → **обновлено: 06 июл 2025 (вечер)**  
+> Файл ведётся внутри каталога `core-model` и обновляется после каждой итерации: строки из «Планируется» переносятся в «Сделано», при необходимости добавляются новые задачи.
 
 ---
 
-## Что **планируется к реализации**
+## Что **уже сделано** (v0.2-alpha, Sprint 0 – 3)
 
-| Приоритет | Блок                           | Конкретные таски                                                                                                                                                                                                                              | Почему сейчас / ценность                                                     |
-| --------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **P0**    | **MiniEvalEngine MVP**         | 1. Реализовать `MiniEvalEngine.run()` для одного простого кейса: пройтись по `technical_services` → посчитать `resources.profile.static.requests`.<br>2. Добавить поддержку переменной `online_users` в формулах `@dyn`.                      | Покажет, что связка Blueprint + LoadProfile реально работает.                |
-| **P0**    | **Unit-тесты («Golden JSON»)** | 1. Сгенерировать tiny‑Blueprint + tiny‑LoadProfile (fixtures).<br>2. Сделать golden‑файл JSON‑результата и сравнивать через `filecmp`.<br>3. Маркер `@pytest.mark.unit`.                                                                      | Красная/зелёная лампочка для Eval и моделей.                                 |
-| **P1**    | **Полные модели Pydantic**     | 1. Перенести структуру из `blueprint.schema.json` в `models/blueprint.py` (можно генерировать `datamodel-code-generator`).<br>2. Включить `extra="forbid"` и типизировать формулы `str` (`Pattern = r"^[0-9\\(\\)\\+\\-\\*/\\.\\*a-z_ ]+$"`). | Сразу закрепит контракты, меньше сюрпризов дальше.                           |
-| **P1**    | **Типовые конвертеры единиц**  | Утилита `parse_quantity("128Mi") -> 134217728` + обратный рендер `bytes -> "Mi"`.                                                                                                                                                             | Формулы начнут «сходиться» при сложении статических и динамических значений. |
-| **P1**    | **GitHub Action**              | Отдельный workflow `core-model.yml`: `ruff + pytest --cov`. <br>Фильтр на `core-model/**`.                                                                                                                                                    | Ранняя автоматизация избавит от сюрпризов в конце.                           |
-| **P2**    | **Док-пример**                 | `examples/acme.yaml` (Blueprint + Load) и ожидаемый `acme.result.json` — удобный smoke‑тест для новых коллег.                                                                                                                                 | Ускорит онбординг и ручные проверки.                                         |
-| **P2**    | **pre-commit hooks**           | Конфиг: `ruff-format`, `black`, `mypy`, `pytest -m unit`.                                                                                                                                                                                     | Подтянет качество без лишних митингов.                                       |
+| Блок                                  | Конкретные таски | Описание реализации / отличия от плана |
+|---------------------------------------|------------------|----------------------------------------|
+| **Infrastructure / Project skeleton** | Каталог `core-model`, layout `src/`, `tests/`, `requirements*`, `.gitignore`. | Совпадает с корпоративным шаблоном. |
+| **CLI / Entry point**                 | Typer-CLI `calculate`; поддержка `--json-out`. | Ленивый импорт моделей. |
+| **Data models (Pydantic)**            | Заглушки `Blueprint`, `LoadProfile`, `Project`, `SizingResult`; JSON-Schema валидация `load_profile` и `project`. | `extra="forbid"` там, где схема финализирована. |
+| **Mini-Eval Engine MVP**              | *Static + dynamic @dyn*, переменные из `LoadProfile`, парсер единиц `parse_quantity`, подмена «64Mi» прямо в выражении. | Движок считает CPU/Memory на уровне service. |
+| **Requests + Limits**                 | Поддержка `limits`, отдельные агрегаты `totals.requests` и `totals.limits`. | Отсутствие limits не ломает схему. |
+| **depends_on граф**                   | DFS-обход Technical → Generic → Infra; кеш `visited` исключает двойной счёт. | `infra.capacity` вычисляется, но не аггрегируется в CPU/RAM. |
+| **Мультизонность**                    | Расчёт для всех `zones` в `Project`; итоговый JSON `{ zones: {..}, totals: .. }`. | Для каждой зоны — собственный `Interpreter` с переменными. |
+| **Unit-тесты + фикстуры**             | Golden JSON для mini-Blueprint, тест графа depend-on, тест multizone. | Маркер `@pytest.mark.unit`. |
+| **Tooling & Dev-Env**                 | `ruff`, `black`, `pre-commit`, pin `click==8.1.7`. | CI пока запускает `pytest` руками (см. «Планируется»). |
 
 ---
 
-> ℹ️ **Как читать приоритеты**
-> • **P0** – критично для ближайшего релиза (Sprint 1)…
-> • **P1** – важно для «твёрдого» v0.1, не блокирует MVP…
-> • **P2** – улучшение, делаем при наличии ресурса.
+## Что **планируется к реализации** (веха **v0.3 → v0.4**)
+
+| Приоритет | Блок | Конкретные таски | Зачем / ценность |
+|-----------|------|------------------|------------------|
+| **P0**    | **Полные модели Pydantic** | ➊ Сгенерировать модели из `blueprint.schema.json` (`datamodel-code-generator`).<br>➋ Включить `extra="forbid"`. | Снижает риск опечаток в DSL. |
+| **P0**    | **Unit-converter 2.0** | Поддержка `Gi`, `Ti`, `MB`, IOPS «/s»; обратный рендер bytes → `Mi/Gi`. | Корректный вывод в XLSX/PDF. |
+| **P0**    | **Zone-multiplier** | В `Zone` добавить `factor` (int/float). При расчёте умножать result каждого zone. | Легко моделировать Prod-2, DR-site. |
+| **P1**    | **Cross-team overrides audit** | При коллизии имён в разных Blueprint-ах маркировать `override` + выводить warning в JSON. | Прозрачность для архитекторов. |
+| **P1**    | **Док-пример / examples** | Папка `examples/`: `acme.project.yaml`, итог `acme.result.json`, скрин CLI-вывода. | Быстрый smoke-тест и обучающий материал для новичков. |
+| **P2**    | **pre-commit расширение** | Добавить `mypy --strict`, `pytest -m unit`. | Единый локальный барьер качества. |
+| **P2**    | **Aggregated infra sizing** | Кубик: суммировать одинаковые infra-типы по зонам (PostgreSQL total GB, Kafka partitions). | Полезно для IaaS-/DBA-команд. |
+| **P2**    | **JSON-Schema для ResourceProfile** | Вынести `resource_profiles` в отдельную схему + lint на CI. | Единая валидация для всех команд. |
+| **P2**    | **GitHub Action CI** | Workflow `core-model.yml`: `ruff`, `black --check`, `pytest --cov`, публиковать HTML-coverage в Job Artifacts. | Надёжный «красный/зелёный» при любом PR. |
+
+> ℹ️ Приоритеты:  
+> **P0** – критично к ближайшему релизу (Sprint 4).  
+> **P1** – важно к «твёрдому» v0.3… v0.4.  
+> **P2** – улучшения, делаем при свободном слоте.
+
+---
