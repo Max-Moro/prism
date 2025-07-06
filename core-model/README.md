@@ -16,10 +16,11 @@
   * всех Technical / Generic сервисов,
   * их зависимостей **Infrastructure** (PostgreSQL, Kafka и др.),
   * каждой **зоны** проекта (Prod, Test, DR …).
-* **Возвращает**:
-  * JSON-объект сайзинга вида  
-    `{ zones: { Prod: {...}, Test: {...} }, totals: {...} }`
-  * (roadmap v0.5) gRPC API для **service**-модуля
+* **Возвращает**  
+  типизированный объект **`SizingResult`** (см. `schemas/sizing_result.schema.json`),  
+  сериализуемый в JSON вида  
+  `{ zones: { Prod: …, Test: … }, totals: …, infra_totals: … }`.  
+  *(gRPC-API для service-модуля запланирован к v0.5.)*
 
 ---
 
@@ -41,11 +42,18 @@ pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
 Проверяем:
 
 ```bash
+# чтобы запускать фактический код без установки модуля
+cd core-model/src
+
 # справка CLI
 python -m bims.prism.cli --help
 
 # smoke-тесты
 pytest -m unit
+
+# «конец-в-конец» YAML → JSON
+python -m bims.prism.cli \
+  ../../examples/acme.project.yaml ../../examples/blueprints/ | jq '.totals'
 ```
 
 ---
@@ -66,6 +74,10 @@ core-model/
 │          │   ├─ load_profile.py
 │          │   ├─ sizing_result.py
 │          │   └─ _gen/          # ← авто-сгенерированные Pydantic-классы
+│          │       ├─ blueprint_gen/
+│          │       ├─ project_gen/
+│          │       ├─ sizing_result_gen.py
+│          │       └─ load_profile_gen.py
 │          └─ schemas/
 │              ├─ load_profile.schema.json
 │              ├─ project.schema.json
