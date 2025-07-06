@@ -26,6 +26,7 @@ SCHEMAS = [
     ("blueprint.schema.json",    "blueprint_gen",          True),   # каталог
     ("load_profile.schema.json", "load_profile_gen.py",    False),  # файл
     ("project.schema.json",      "project_gen",            True),   # каталог  ← FIX
+    ("sizing_result.schema.json","sizing_result_gen.py",   False),
 ]
 
 BASE_CMD = [

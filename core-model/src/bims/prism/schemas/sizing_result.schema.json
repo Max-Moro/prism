@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bims.dev/prism/sizing_result.schema.json",
+  "title": "PRISM Sizing Result",
+  "type": "object",
+  "required": ["zones", "totals"],
+  "additionalProperties": false,
+
+  "properties": {
+    "zones": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/ZoneResult" }
+    },
+    "totals": { "$ref": "#/$defs/TotalResources" },
+    "infra_totals": {
+      "type": "object",
+      "description": "Суммарные capacity по типу infra-dependency",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "number" }
+      }
+    }
+  },
+
+  "$defs": {
+    "ResourcePair": {
+      "type": "object",
+      "required": ["cpu", "memory"],
+      "additionalProperties": false,
+      "properties": {
+        "cpu":    { "type": "number" },
+        "memory": { "type": "number" }
+      }
+    },
+
+    "TotalResources": {
+      "type": "object",
+      "required": ["requests", "limits"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": { "$ref": "#/$defs/ResourcePair" },
+        "limits":   { "$ref": "#/$defs/ResourcePair" }
+      }
+    },
+
+    "ServiceResources": {
+      "type": "object",
+      "required": ["requests", "limits"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": {
+          "type": "object",
+          "required": ["cpu_cores", "memory_bytes"],
+          "additionalProperties": false,
+          "properties": {
+            "cpu_cores":    { "type": "number" },
+            "memory_bytes": { "type": "number" }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "required": ["cpu_cores", "memory_bytes"],
+          "additionalProperties": false,
+          "properties": {
+            "cpu_cores":    { "type": "number" },
+            "memory_bytes": { "type": "number" }
+          }
+        }
+      }
+    },
+
+    "InfraObject": {
+      "type": "object",
+      "required": ["type", "capacity"],
+      "additionalProperties": false,
+      "properties": {
+        "type":    { "type": "string" },
+        "version": { "type": ["string", "null"] },
+        "capacity": {
+          "type": "object",
+          "additionalProperties": { "type": "number" }
+        }
+      }
+    },
+
+    "ZoneResult": {
+      "type": "object",
+      "required": ["services", "generic_services", "infra", "totals"],
+      "additionalProperties": false,
+      "properties": {
+        "services": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ServiceResources" }
+        },
+        "generic_services": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ServiceResources" }
+        },
+        "infra": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/InfraObject" }
+        },
+        "totals": { "$ref": "#/$defs/TotalResources" }
+      }
+    }
+  }
+}

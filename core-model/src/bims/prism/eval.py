@@ -231,8 +231,8 @@ class MiniEvalEngine:
                         infra_totals[itype].get(cap_key, 0.0) + cap_val
                     )
 
-        return SizingResult(
-            details={
+        return SizingResult.parse_obj(
+            {
                 "zones": zones_out,
                 "totals": totals,
                 "infra_totals": infra_totals,

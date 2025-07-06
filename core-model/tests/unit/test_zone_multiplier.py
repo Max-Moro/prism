@@ -12,11 +12,11 @@ def test_zone_multiplier():
     zone = Zone(name="Prod-3x", enabled_modules=["inspection"], load_profile=load, factor=3)
     proj = Project(customer="multiplier-test", zones=[zone])
 
-    res = MiniEvalEngine([bp], proj).run().details
-    z = res["zones"]["Prod-3x"]
+    res = MiniEvalEngine([bp], proj).run()
+    z = res.zones["Prod-3x"]
 
-    assert z["totals"]["requests"]["cpu"] > 0
+    assert z.totals.requests.cpu > 0
     # проверяем, что cpu умножилось ровно на 3
-    assert z["totals"]["requests"]["cpu"] == pytest.approx(
-        z["totals"]["limits"]["cpu"] / (z["totals"]["limits"]["cpu"] / z["totals"]["requests"]["cpu"])
-    )
+    assert z.totals.requests.cpu == pytest.approx(
+        z.totals.limits.cpu / (z.totals.limits.cpu / z.totals.requests.cpu)
+     )

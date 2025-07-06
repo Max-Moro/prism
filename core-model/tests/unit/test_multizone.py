@@ -8,14 +8,14 @@ def test_multizone():
     project = Project.parse_file("tests/fixtures/project.yaml")
     bp      = Blueprint.parse_file("tests/fixtures/depblueprint.yaml")
 
-    res = MiniEvalEngine([bp], project).run().details
+    res = MiniEvalEngine([bp], project).run()
 
-    assert "Prod" in res["zones"] and "Test" in res["zones"]
-    assert res["totals"]["requests"]["cpu"] > res["zones"]["Test"]["totals"]["requests"]["cpu"]
+    assert "Prod" in res.zones and "Test" in res.zones
+    assert res.totals.requests.cpu > res.zones["Test"].totals.requests.cpu
 
     # aggregated infra sizing
     pg_total = (
-        res["zones"]["Prod"]["infra"]["postgres-primary"]["capacity"]["storage_gb"]
-        + res["zones"]["Test"]["infra"]["postgres-primary"]["capacity"]["storage_gb"]
+        res.zones["Prod"].infra["postgres-primary"].capacity["storage_gb"]
+        + res.zones["Test"].infra["postgres-primary"].capacity["storage_gb"]
     )
-    assert res["infra_totals"]["postgres"]["storage_gb"] == pytest.approx(pg_total)
+    assert res.infra_totals["postgres"]["storage_gb"] == pytest.approx(pg_total)
