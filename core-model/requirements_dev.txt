@@ -4,3 +4,4 @@ ruff==0.4.6            # Linter + автоимпорт
 black==24.4.2
 mypy==1.10.0
 pre-commit==3.7.1
+datamodel-code-generator==0.31.2   # генерируем Pydantic v2 модели

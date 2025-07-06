@@ -1,3 +1,14 @@
+"""
+LoadProfile — тонкая обёртка над автосгенерированным классом
+`project_gen.load_profile.Schema`.
+
+Она:
+* добавляет метод `parse_file(path)` с предварительной JSON-Schema
+  валидацией (как было раньше);
+* остаётся совместимой с `Zone`, потому что наследуется
+  от именно того класса, который указан в схеме Project.
+"""
+
 from __future__ import annotations
 
 import json
@@ -5,56 +16,55 @@ from pathlib import Path
 from typing import Any, Dict
 
 import yaml
-from jsonschema import validate, ValidationError
-from pydantic import BaseModel, ValidationError as PydanticError, ConfigDict
+from jsonschema import ValidationError as _JSValidationError, validate as _js_validate
+from pydantic import ValidationError as _PydanticError
 
-# Загружаем JSON-Schema один раз при импорте
-_SCHEMAPATH = Path(__file__).resolve().parent.parent / "schemas" / "load_profile.schema.json"
-with _SCHEMAPATH.open(encoding="utf-8") as _fh:
+# ──────────────────────────────────────────────────────────────────────────────
+# ⚠️  ВАЖНО: используем _тот_ класс, на который ссылается Zone
+from ._gen.project_gen.load_profile import (  # noqa: WPS433
+    Schema as _LPBase,
+)
+
+# ------------------------------------------------------------------ schema
+_SCHEMA_PATH = (
+    Path(__file__).resolve().parent / ".." / "schemas" / "load_profile.schema.json"
+).resolve()
+with _SCHEMA_PATH.open(encoding="utf-8") as _fh:
     _LOAD_SCHEMA = json.load(_fh)
 
 
-class LoadProfile(BaseModel):
-    """Набор входных нагрузочных параметров."""
+class LoadProfile(_LPBase):  # type: ignore[misc]
+    """
+    Публичная модель. Поля наследуются из автоген-класса `Schema`.
+    """
 
-    online_users: int
-    total_users: int
-    rps: int
-    rps_p95: int
-    jobs_rate: int | None = None
-    structured_data_gb: float
-    unstructured_data_gb: float
-
-    # schema уже ловит опечатки, но forbid защитит от ручного создания объекта
-    model_config = ConfigDict(extra="forbid")
-
-    # --------------------------------------------------------------------- #
+    # ----------------------------------------------------------- helpers
     @classmethod
-    def _validate_jsonschema(cls, data: Dict[str, Any]) -> None:
-        """Бросает ValidationError jsonschema при несоответствии."""
-        validate(instance=data, schema=_LOAD_SCHEMA)
+    def _validate_jsonschema(cls, raw: Dict[str, Any]) -> None:
+        """Поднимает jsonschema.ValidationError при несоответствии."""
+        _js_validate(instance=raw, schema=_LOAD_SCHEMA)
 
+    # ----------------------------------------------------------- public
     @classmethod
     def parse_file(cls, path: str | Path) -> "LoadProfile":
         """
-        Читает YAML/JSON, валидирует по JSON-Schema, затем парсит Pydantic.
-        Поддерживает вариант с обёрткой `load_profile: {...}`.
+        Читает YAML/JSON → JSON-Schema → Pydantic.
+        Поддерживает вариант с обёрткой `load_profile: { ... }`.
         """
         path = Path(path)
         with path.open(encoding="utf-8") as fh:
             raw: Dict[str, Any] = yaml.safe_load(fh)
 
-        # unwrap, если файл содержит корневой ключ load_profile
-        data = raw.get("load_profile", raw)
+        data = raw.get("load_profile", raw)  # unwrap, если нужно
 
-        # ↓ jsonschema — ловим опечатки и неверные типы раньше Pydantic
         try:
             cls._validate_jsonschema(data)
-        except ValidationError as e:
-            raise ValueError(f"LoadProfile JSON-Schema validation failed: {e.message}") from e
+        except _JSValidationError as exc:
+            raise ValueError(
+                f"LoadProfile JSON-Schema validation failed: {exc.message}"
+            ) from exc
 
-        # ↓ Pydantic — строгая типизация + post-processing
         try:
             return cls.model_validate(data)
-        except PydanticError as e:  # даст красивый str()
-            raise ValueError(f"LoadProfile parsing error: {e}") from e
+        except _PydanticError as exc:
+            raise ValueError(f"LoadProfile parsing error: {exc}") from exc

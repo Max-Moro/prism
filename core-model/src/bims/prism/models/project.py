@@ -1,3 +1,12 @@
+"""
+Project / Zone — оболочки над сгенерированными моделями project.schema.json.
+
+* Перехватываем `parse_file` для ручной JSON-Schema проверки
+  (как было в прежней реализации) — лишний «второй» слой безопасности.
+* Экспортируем `Zone` (из сгенерированного кода) так же, как раньше,
+  чтобы юнит-тесты продолжали использовать `Zone.model_construct(...)`.
+"""
+
 from __future__ import annotations
 
 import json
@@ -5,67 +14,70 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import yaml
-from jsonschema import Draft202012Validator, ValidationError
-from pydantic import BaseModel, ConfigDict, Field
-from referencing import Registry, Resource
+from jsonschema import Draft202012Validator, ValidationError as _JSValidationError
+from pydantic import ValidationError as _PydanticError
 
-# --- load both schemas once ------------------------------------------------
-_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schemas" / "project.schema.json"
+from .load_profile import _LOAD_SCHEMA  # ре-используем из соседнего модуля
+
+# ──────────────────────────────────────────────────────────────────────────────
+# сгенерированные модели
+from ._gen.project_gen import (  # noqa: WPS433
+    PrismProjectSizingFile as _ProjectGen,
+    Zone as _ZoneGen,
+)
+
+# ---------------------------------------------------------------------- schema
+_SCHEMA_PATH = (
+    Path(__file__).resolve().parent / ".." / "schemas" / "project.schema.json"
+).resolve()
 with _SCHEMA_PATH.open(encoding="utf-8") as _fh:
     _PROJECT_SCHEMA = json.load(_fh)
 
-# load_profile schema (already loaded in LoadProfile module, reuse)
-from .load_profile import _LOAD_SCHEMA   # noqa: WPS433
+# регистрируем обе схемы, чтобы `$ref` на load_profile работал офф-лайн
+from referencing import Registry, Resource  # noqa: WPS433
 
-# registry «URL → объект» для резолвера
 _SCHEMA_REGISTRY = (
     Registry()
-    .with_resources([
-        (_PROJECT_SCHEMA["$id"], Resource.from_contents(_PROJECT_SCHEMA)),
-        (_LOAD_SCHEMA["$id"],    Resource.from_contents(_LOAD_SCHEMA)),
-    ])
+    .with_resources(
+        [
+            (_PROJECT_SCHEMA["$id"], Resource.from_contents(_PROJECT_SCHEMA)),
+            (_LOAD_SCHEMA["$id"], Resource.from_contents(_LOAD_SCHEMA)),
+        ]
+    )
 )
 
-# --- Pydantic -------------------------------------------------------------
-class Zone(BaseModel):
-    name: str
-    enabled_modules: List[str] = Field(min_length=1)
-    load_profile: "LoadProfile"
 
-    model_config = ConfigDict(extra="forbid")
+class Project(_ProjectGen):  # type: ignore[misc]
+    """Публичная модель Project. Наследуем поля, добавляем parse_file."""
 
-
-class Project(BaseModel):
-    customer: str
-    zones: List[Zone] = Field(min_length=1)
-
-    model_config = ConfigDict(extra="forbid")
-
-    # ---------------------------------------------------------- helpers ----
+    # ----------------------------------------------------------------- helpers
     @classmethod
     def _validate_jsonschema(cls, data: Dict[str, Any]) -> None:
         Draft202012Validator(
-            schema=_PROJECT_SCHEMA,
-            registry=_SCHEMA_REGISTRY,      # ⬅ локальный кэш
+            schema=_PROJECT_SCHEMA, registry=_SCHEMA_REGISTRY
         ).validate(instance=data)
 
+    # ---------------------------------------------------------------- public
     @classmethod
     def parse_file(cls, path: str | Path) -> "Project":
+        """Загрузка YAML/JSON + JSON-Schema + Pydantic."""
         path = Path(path)
         with path.open(encoding="utf-8") as fh:
             raw: Dict[str, Any] = yaml.safe_load(fh)
 
         try:
             cls._validate_jsonschema(raw)
-        except ValidationError as e:
-            raise ValueError(f"Project schema validation failed: {e.message}") from e
+        except _JSValidationError as exc:
+            raise ValueError(
+                f"Project schema validation failed: {exc.message}"
+            ) from exc
 
-        # импорт здесь, чтобы избежать циклов
+        try:
+            return cls.model_validate(raw)
+        except _PydanticError as exc:
+            raise ValueError(f"Project parsing error: {exc}") from exc
 
-        return cls.model_validate(raw)
 
-# «живой» импорт, а не только TYPE_CHECKING
-from .load_profile import LoadProfile  # noqa: WPS433
-
-Zone.model_rebuild()
-Project.model_rebuild()
+# ──────────────────────────────────────────────────────────────────────────────
+# Re-export для совместимости с существующим кодом / тестами
+Zone = _ZoneGen  # noqa: N816  (оставляем CamelCase — как было)
