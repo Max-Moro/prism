@@ -1,0 +1,14 @@
+kind: Blueprint
+team: alt-team
+version: 0.1.0
+
+generic_services:
+  notification:
+    image: alt/notify:2.0
+    resources: { profile: xsmall-web }
+
+resource_profiles:
+  xsmall-web:
+    static:
+      requests: { cpu: "50m", memory: "128Mi" }
+      limits:   { cpu: "150m", memory: "256Mi" }

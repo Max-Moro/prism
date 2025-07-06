@@ -231,10 +231,13 @@ class MiniEvalEngine:
                         infra_totals[itype].get(cap_key, 0.0) + cap_val
                     )
 
-        return SizingResult.parse_obj(
-            {
+        result_obj = {
                 "zones": zones_out,
                 "totals": totals,
                 "infra_totals": infra_totals,
-            }
-        )
+        }
+
+        if self.index.overrides:
+            result_obj["warnings"] = {"overrides": self.index.overrides}
+
+        return SizingResult.parse_obj(result_obj)

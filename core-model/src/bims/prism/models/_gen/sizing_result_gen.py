@@ -3,9 +3,25 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Extra, Field
+
+
+class Override(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
+    name: str
+    kind: str
+    teams: List[str] = Field(..., min_items=2)
+
+
+class Warnings(BaseModel):
+    class Config:
+        extra = Extra.forbid
+
+    overrides: Optional[List[Override]] = None
 
 
 class ResourcePair(BaseModel):
@@ -75,4 +91,7 @@ class PrismSizingResult(BaseModel):
     totals: TotalResources
     infra_totals: Optional[Dict[str, Dict[str, float]]] = Field(
         None, description="Суммарные capacity по типу infra-dependency"
+    )
+    warnings: Optional[Warnings] = Field(
+        None, description="Нефатальные сообщения расчёта"
     )

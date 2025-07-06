@@ -19,6 +19,30 @@
         "type": "object",
         "additionalProperties": { "type": "number" }
       }
+    },
+    "warnings": {
+      "type": "object",
+      "description": "Нефатальные сообщения расчёта",
+      "additionalProperties": false,
+      "properties": {
+        "overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind", "teams"],
+            "additionalProperties": false,
+            "properties": {
+              "name":  { "type": "string" },
+              "kind":  { "type": "string" },
+              "teams": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 2
+              }
+            }
+          }
+        }
+      }
     }
   },
 
