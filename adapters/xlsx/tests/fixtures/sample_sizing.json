@@ -1,0 +1,16 @@
+{
+  "zones": {
+    "Prod": {
+      "totals": {
+        "requests": {"cpu": 8.25, "memory": 34359738368},
+        "limits":   {"cpu": 12.0, "memory": 68719476736}
+      }
+    },
+    "Test": {
+      "totals": {
+        "requests": {"cpu": 1.5, "memory": 8589934592},
+        "limits":   {"cpu": 2.5, "memory": 17179869184}
+      }
+    }
+  }
+}

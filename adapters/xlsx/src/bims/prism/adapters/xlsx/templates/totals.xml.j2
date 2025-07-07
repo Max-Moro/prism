@@ -1,0 +1,21 @@
+{% raw -%}<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetData>
+    <row r="1">
+      <c t="s" r="A1"><v>0</v></c>
+      <c t="s" r="B1"><v>1</v></c>
+      <c t="s" r="C1"><v>2</v></c>
+      <c t="s" r="D1"><v>3</v></c>
+      <c t="s" r="E1"><v>4</v></c>
+    </row>
+    {%- for z in zones %}
+    <row r="{{ loop.index + 1 }}">
+      <c t="s" r="A{{ loop.index + 1 }}"><v>{{ z.name }}</v></c>
+      <c t="n" r="B{{ loop.index + 1 }}"><v>{{ z.req_cpu }}</v></c>
+      <c t="s" r="C{{ loop.index + 1 }}"><v>{{ z.req_mem }}</v></c>
+      <c t="n" r="D{{ loop.index + 1 }}"><v>{{ z.lim_cpu }}</v></c>
+      <c t="s" r="E{{ loop.index + 1 }}"><v>{{ z.lim_mem }}</v></c>
+    </row>
+    {%- endfor %}
+  </sheetData>
+</worksheet>{% endraw %}
