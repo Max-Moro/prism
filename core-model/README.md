@@ -49,6 +49,7 @@ cd core-model/src
 python -m bims.prism.cli --help
 
 # smoke-тесты
+cd ..
 pytest -m unit
 
 # «конец-в-конец» YAML → JSON

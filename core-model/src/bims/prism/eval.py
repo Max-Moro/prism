@@ -6,7 +6,7 @@ from asteval import Interpreter
 
 from .graph import BlueprintIndex
 from .models import SizingResult
-from .units import parse_quantity
+from bims.prism.common.units import parse_quantity
 
 _WHITELIST = {
     "ceil": math.ceil,

@@ -5,6 +5,7 @@ Typed SizingResult: обёртка над автоген-моделью с до�
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any, Dict
 
@@ -13,12 +14,12 @@ from pydantic import ValidationError as _PydValidationError
 
 from ._gen.sizing_result_gen import PrismSizingResult as _SRGen
 
-_SCHEMA_PATH = (
-    Path(__file__).resolve().parent / ".." / "schemas" / "sizing_result.schema.json"
+# Схема лежит в общем модуле в `prism-common` в bims.prism.common.schemas/sizing_result.schema.json
+_SCHEMA = json.loads(
+    resources.files("bims.prism.common.schemas")
+    .joinpath("sizing_result.schema.json")
+    .read_text(encoding="utf-8")
 )
-
-with _SCHEMA_PATH.open(encoding="utf-8") as fh:
-    _SCHEMA = json.load(fh)
 
 
 class SizingResult(_SRGen):  # type: ignore[misc]

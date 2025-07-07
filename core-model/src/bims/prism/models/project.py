@@ -10,14 +10,13 @@ Project / Zone — оболочки над сгенерированными мо
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import yaml
 from jsonschema import Draft202012Validator, ValidationError as _JSValidationError
 from pydantic import ValidationError as _PydanticError
-
-from .load_profile import _LOAD_SCHEMA  # ре-используем из соседнего модуля
 
 # ──────────────────────────────────────────────────────────────────────────────
 # сгенерированные модели
@@ -25,13 +24,14 @@ from ._gen.project_gen import (  # noqa: WPS433
     PrismProjectSizingFile as _ProjectGen,
     Zone as _ZoneGen,
 )
+from .load_profile import _LOAD_SCHEMA  # ре-используем из соседнего модуля
 
 # ---------------------------------------------------------------------- schema
-_SCHEMA_PATH = (
-    Path(__file__).resolve().parent / ".." / "schemas" / "project.schema.json"
-).resolve()
-with _SCHEMA_PATH.open(encoding="utf-8") as _fh:
-    _PROJECT_SCHEMA = json.load(_fh)
+_PROJECT_SCHEMA = json.loads(
+    resources.files("bims.prism.common.schemas")
+    .joinpath("project.schema.json")
+    .read_text(encoding="utf-8")
+)
 
 # регистрируем обе схемы, чтобы `$ref` на load_profile работал офф-лайн
 from referencing import Registry, Resource  # noqa: WPS433

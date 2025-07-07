@@ -26,7 +26,7 @@
             "minimum": 1,
             "default": 1
           },
-          "load_profile": { "$ref": "load_profile.schema.json" }
+          "load_profile": { "$ref": "load_profile.schema.json"}
         }
       }
     }

@@ -2,6 +2,6 @@ pydantic==2.7.1          # модели
 PyYAML==6.0.2            # загрузка YAML
 typer[all]==0.12.3       # CLI (all → rich, colorama и др.)
 asteval==0.9.31          # mini-eval движок формул
-# --- временный пин из-за несовместимости Typer ↔ Click >= 8.2
-click==8.1.7
+click==8.1.7             # временный пин из-за несовместимости Typer ↔ Click >= 8.2
 jsonschema==4.22.0       # runtime валидация схем
+-e ../common             # локальный prism-common (>=0.1.0)

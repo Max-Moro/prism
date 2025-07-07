@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from bims.prism.units import format_bytes, parse_quantity
+from bims.prism.common.units import format_bytes, parse_quantity
 
 
 @pytest.mark.unit

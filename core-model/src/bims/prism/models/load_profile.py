@@ -12,6 +12,7 @@ LoadProfile — тонкая обёртка над автосгенериров�
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any, Dict
 
@@ -25,12 +26,12 @@ from ._gen.project_gen.load_profile import (  # noqa: WPS433
     Schema as _LPBase,
 )
 
-# ------------------------------------------------------------------ schema
-_SCHEMA_PATH = (
-    Path(__file__).resolve().parent / ".." / "schemas" / "load_profile.schema.json"
-).resolve()
-with _SCHEMA_PATH.open(encoding="utf-8") as _fh:
-    _LOAD_SCHEMA = json.load(_fh)
+# ---------------------------------------------------------------------- schema
+_LOAD_SCHEMA = json.loads(
+    resources.files("bims.prism.common.schemas")
+    .joinpath("load_profile.schema.json")
+    .read_text(encoding="utf-8")
+)
 
 
 class LoadProfile(_LPBase):  # type: ignore[misc]

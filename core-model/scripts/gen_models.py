@@ -1,8 +1,15 @@
 """
-Генерирует Pydantic-модели из JSON-Schema для:
-  • blueprint.schema.json     →  models/_gen/blueprint_gen/   (каталог-пакет)
-  • load_profile.schema.json  →  models/_gen/load_profile_gen.py
-  • project.schema.json       →  models/_gen/project_gen.py
+Генерирует Pydantic-модели из JSON-Schema.
+
+Public-контракты (`SizingResult`, `Project`, `LoadProfile`) лежат
+в пакете **prism-common**, остальные схемы остаются локально.
+
+| Schema-файл                  | Где лежит                             | Выходной модуль                    |
+| -----------------------------|---------------------------------------|------------------------------------|
+| blueprint.schema.json        | core-model/src/bims/prism/schemas/    | models/_gen/blueprint_gen/ (pkg)   |
+| load_profile.schema.json     | common/src/bims/prism/common/schemas/ | models/_gen/load_profile_gen.py    |
+| project.schema.json          |   »                                   | models/_gen/project_gen/  (pkg)    |
+| sizing_result.schema.json    |   »                                   | models/_gen/sizing_result_gen.py   |
 
 Запуск из корня репозитория (Windows / *nix):
 > python scripts\\gen_models.py
@@ -16,17 +23,23 @@ from pathlib import Path
 # ──────────────────────────── paths ───────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent
 
-SCHEMA_DIR = ROOT / "core-model" / "src" / "bims" / "prism" / "schemas"
-OUT_DIR    = ROOT / "core-model" / "src" / "bims" / "prism" / "models" / "_gen"
+# локальные (внутренние) схемы ядра
+CORE_SCHEMA_DIR    = ROOT / "core-model" / "src" / "bims" / "prism" / "schemas"
+# публичные схемы (prism-common)
+COMMON_SCHEMA_DIR  = (
+    ROOT / "common" / "src" / "bims" / "prism" / "common" / "schemas"
+)
+
+OUT_DIR = ROOT / "core-model" / "src" / "bims" / "prism" / "models" / "_gen"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# (schema-file,   output-relative-path, is_directory_output?)
+# файл → (каталог-схем,  output-путь, is_dir)
 SCHEMAS = [
-    # schema-file               # output-relative-path      # is_directory_output
-    ("blueprint.schema.json",    "blueprint_gen",          True),   # каталог
-    ("load_profile.schema.json", "load_profile_gen.py",    False),  # файл
-    ("project.schema.json",      "project_gen",            True),   # каталог  ← FIX
-    ("sizing_result.schema.json","sizing_result_gen.py",   False),
+    # schema                    # out-rel-path            # dir?
+    ("blueprint.schema.json",    CORE_SCHEMA_DIR,   "blueprint_gen",        True),
+    ("load_profile.schema.json", COMMON_SCHEMA_DIR, "load_profile_gen.py",  False),
+    ("project.schema.json",      COMMON_SCHEMA_DIR, "project_gen",          True),
+    ("sizing_result.schema.json",COMMON_SCHEMA_DIR, "sizing_result_gen.py", False),
 ]
 
 BASE_CMD = [
@@ -41,8 +54,8 @@ BASE_CMD = [
 ]
 
 # ──────────────────────────── run generator ───────────────────────
-for schema_name, rel_out, as_dir in SCHEMAS:
-    in_path = SCHEMA_DIR / schema_name
+for schema_name, schema_dir, rel_out, as_dir in SCHEMAS:
+    in_path = schema_dir / schema_name
     out_path = OUT_DIR / rel_out
 
     if as_dir:
