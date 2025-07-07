@@ -1,43 +1,42 @@
 # Архитектура отчётных провайдеров PRISM
 
-> Версия 0.1 — черновик, 07 июл 2025
+> **Версия 0.2 — актуализировано после перехода на multi-package layout, 09 июл 2025**
 
 ---
 
 ## 1. Цель и рамки документа
 
 * Описать **архитектуру** модулей генерации отчётов (XLSX / PDF + HTML) и показать, как они удовлетворяют собранные требования.
-* Зафиксировать **интеграционные точки** с `core-model`.
-* Обосновать выбор технологий, принятую структуру каталогов и правила расширения.
+* Зафиксировать **интеграционные точки** между `core-model` (движок расчёта) и адаптерами.
+* Обосновать выбор технологий, структуру каталогов и правила расширения.
 
 ---
 
-## 2. Краткое напоминание о требованиях
+## 2. Требования ↔ реализация — актуальное состояние
 
-| Категория                       | Требование                                                                                         | Как учитываем в дизайне                                                       |        |
-| ------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------ |
-| **Читабельность**               | Документы читают менеджеры без ИТ-бэкграунда.                                                      | Табличные и графические разделы с пояснительным текстом.                      |        |
-| **Официальный стиль**           | Встраивание в тендерный пакет; должен выглядеть «как юр. документ».                                | Корп. шаблоны стилей: шрифты, колонтитулы, логотипы.                          |        |
-| **Многоуровневая терминология** | Сейчас: Container Orchestration / Service Component (3A/3B). В будущем: VM-Layer и Hardware-Layer. | Слой маппинга «уровень → термины» вынесен в отдельный пакет `mapping/`.       |        |
-| **Расширяемость**               | Легко добавить новый формат (ODF, PPTX…).                                                          | Единый «шлюз» `ReportAdapter` (см. § 4.3).                                    |        |
-| **Автоматизация CI**            | Snapshot-тесты, проверка, что отчёт пересоздаётся без диффов.                                      | Папка `tests/snapshots/`, hash-проверка XLSX, PDF‐render → PNG для сравнения. |        |
-| **Self-service**                | SPA будет запрашивать отчёт on-demand.                                                             | REST / gRPC endpoint \`GET /reports/{id}/download?type=xlsx                   | pdf\`. |
+| Категория                       | Требование (из Business Intro)                                             | Как соблюдаем в дизайне                                                                                               |        |
+| ------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------ |
+| **Читаемость**                  | Документы читают менеджеры без ИТ-бэкграунда.                              | Таблицы + пояснительный текст; pre-set корпоративных стилей.                                                          |        |
+| **Официальный стиль**           | Встраивание в тендерный пакет; «как юр. документ».                         | Шаблоны стилей (шрифты, колонтитулы, логотипы).                                                                       |        |
+| **Многоуровневая терминология** | Сейчас: Container / Service (уровни 2-3). Далее: VM-Layer, Hardware-Layer. | Отдельный слой маппинга «уровень → термины» (`bims.prism.common.mapping`).                                            |        |
+| **Расширяемость**               | Поддержать другие форматы (ODF, PPTX, …).                                  | Фасад `build_report()` + паттерн *Strategy*; новый адаптер подключается декларативно.                                 |        |
+| **Изоляция зависимостей**       | Ядро и каждый адаптер ставятся отдельно (может быть на другом языке).      | Три независимых wheel: **prism-core**, **prism-common**, **prism-adapters-xlsx**.<br>CLI-интеграция через JSON-файлы. |        |
+| **CI / Snapshot-тесты**         | Проверка, что отчёт пересоздаётся без диффов.                              | `pytest-snapshot`; байтовая проверка XLSX, растровая — PDF.                                                           |        |
+| **Self-service**                | SPA запрашивает отчёт on-demand.                                           | Spring-Service отдаёт файл по REST \`GET /reports/{id}?format=xlsx                                                    | pdf\`. |
 
 ---
 
 ## 3. Входные данные для адаптеров
 
-| Источник                       | Тип / Схема                                       | Где объявлена                                    | Используется для           |
-| ------------------------------ | ------------------------------------------------- | ------------------------------------------------ | -------------------------- |
-| **`SizingResult`**             | JSON-объект, схема `sizing_result.schema.json`    | `core-model/src/.../schemas/sizing_result*.json` | Все числовые расчёты       |
-| **`Project`**                  | JSON-объект, схема `project.schema.json` *(опц.)* | idem                                             | Заголовки, зоны            |
-| **`BlueprintIndex.overrides`** | Часть `warnings`                                  | Из `SizingResult.warnings.overrides`             | Примечания, раздел «Риски» |
-| **Тема оформления**            | YAML (`theme.yaml`)                               | `adapters/report/themes/`                        | Цвета, шрифты              |
+| Источник                       | Тип / Схема                              | Где лежит схема                               | Используется для            |
+| ------------------------------ | ---------------------------------------- | --------------------------------------------- | --------------------------- |
+| **`SizingResult`**             | JSON-объект, `sizing_result.schema.json` | `prism-common/src/bims/prism/common/schemas/` | Все числовые расчёты        |
+| **`Project`** *(optional)*     | JSON-объект, `project.schema.json`       | idem                                          | Заголовки, список зон       |
+| **`BlueprintIndex.overrides`** | Часть `SizingResult.warnings`            | уже в JSON-результате                         | Примечания / раздел «Риски» |
+| **Theme**                      | YAML `theme.yaml`                        | `prism-adapters-report/themes/`               | Цвета, шрифты               |
 
-> Адаптер **НЕ** должен импортировать весь код `core-model`. Достаточно:
->
-> 1. Десериализовать `SizingResult` (Pydantic модель уже сгенерирована).
-> 2. (Опционально) прочитать `Project` для названия заказчика и зон.
+> Адаптер **не импортирует `core-model`**.
+> Он валидирует входной JSON по схеме из **prism-common** и берёт только нужные поля.
 
 ---
 
@@ -46,122 +45,102 @@
 ```mermaid
 sequenceDiagram
     participant CLI
-    participant CoreModel as «core-model»
-    participant ReportFacade as «adapters/»
-    participant XLSX as XlsxAdapter
-    participant PDF as PdfAdapter
+    participant Core as «prism-core»  (python 3.12 venv A)
+    participant XLSX as «prism-adapters-xlsx»  (python 3.12 venv B)
 
-    CLI->>CoreModel: calculate project.yaml → SizingResult
-    CoreModel-->>CLI: JSON / объект
-    CLI->>ReportFacade: build_report(type="xlsx", data=SizingResult)
-    ReportFacade->>+XLSX: generate(...)
-    XLSX-->>-ReportFacade: bytes
-    ReportFacade-->>CLI: bytes → файл
+    CLI->>Core: prism-cli calculate project.yaml → sizing_result.json
+    Core-->>CLI: файл JSON
+    CLI->>XLSX: python -m bims.prism.adapters.xlsx.cli sizing_result.json
+    XLSX-->>CLI: report.xlsx
 ```
 
-### 4.1 API «core-model → adapters»
+* **Разные venv / образы** ⇒ независимые зависимости.
+* В контейнере «всё-в-одном» каждый адаптер — отдельный слой + хелпер-скрипт.
+
+### 4.1 Фасад внутри пакета `prism-adapters-xlsx`
 
 ```python
+# bims.prism.adapters.xlsx.__init__.py
 def build_report(
-    result: SizingResult,
-    *,
-    fmt: Literal["xlsx", "pdf", "html"],
-    project: Project | None = None,
+    result_json: dict,
+    *,  # все параметры только keywords
     theme: str = "default",
 ) -> bytes: ...
 ```
 
-### 4.2 Варианты вызова
+> Переиспользуется CLI-обвязкой (`python -m bims.prism.adapters.xlsx.cli …`) и Spring-Service через subprocess.
 
-* **CLI** (`prism-cli report`) — читает JSON с диска.
-* **Service** (Spring) — делает gRPC-call к Core-Model, затем локально вызывает `build_report`.
-* **Batch-job** — импортирует `adapters.xlsx` напрямую (Python‐only сценарий).
+---
 
-### 4.3 Паттерн «Facade + Strategy»
+## 5. Выбор технологий — без изменений
+
+| Подсистема           | Библиотеки / Форматы                     | Причина выбора                          |
+| -------------------- | ---------------------------------------- | --------------------------------------- |
+| **XLSX-Adapter**     | `openpyxl`, `pandas`, `jinja_excel`      | Полный контроль стилей, write-only API. |
+| **PDF/HTML-Adapter** | `Jinja2` → `WeasyPrint`                  | HTML + CSS → PDF без LaTeX.             |
+| **i18n слой**        | `gettext` + JSON словари                 | Совместно с фронтендом (react-i18next). |
+| **Тесты**            | `pytest`, `pytest-snapshot`, `pdf2image` | Байтовый diff XLSX, растровый diff PDF. |
+| **CI**               | Re-use GH-Action (lint, test, build)     | Единый шаблон.                          |
+
+---
+
+## 6. Поддержка будущих уровней терминологии
+
+| Будущий уровень | Что добавит `core-model` | Что делает адаптер                  |
+| --------------- | ------------------------ | ----------------------------------- |
+| **VM-Layer**    | `SizingResult.vm_totals` | Добавить колонку / ячейку в шаблон. |
+| **Hardware**    | `SizingResult.hw_totals` | Новый лист «Hardware BoM».          |
+
+Адаптер остаётся «тупым» — только рендер.
+
+---
+
+## 7. Каталоги после refactor
 
 ```
-ReportFacade
-└─┬─ XlsxAdapter      (openpyxl + pandas)
-  └─ PdfAdapter       (Jinja2 + WeasyPrint)
+prism-adapters-xlsx/
+├─ src/
+│   └─ bims/prism/adapters/xlsx/
+│       ├─ __init__.py       # build_report
+│       ├─ builder.py        # XlsxAdapter
+│       ├─ cli.py            # CLI wrapper
+│       └─ templates/
+│           ├─ totals.xml.j2
+│           └─ ...
+├─ tests/
+│   ├─ unit/
+│   ├─ integration/
+│   └─ __snapshots__/
+└─ pyproject.toml            # wheel prism-adapters-xlsx
 ```
 
-*Фасад* выбирает стратегию по параметру `fmt` и скрывает детали форматирования.
+(Аналогичная структура появится для `prism-adapters-report`.)
 
 ---
 
-## 5. Выбор технологий
+## 8. Потоки расширения — без изменений
 
-| Подсистема                 | Библиотеки / Форматы                                     | Причина выбора                                                                                  |
-| -------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **XLSX-Adapter**           | `openpyxl`, `pandas`, `jinja_excel` *(template helpers)* | • Полный контроль стилей (табличная верстка, слияние ячеек).<br>• Пакет уже в use-case MVP 0.2. |
-| **PDF/HTML-Adapter**       | `Jinja2` (HTML templates) → `WeasyPrint`                 | • Отделение логики от шаблона.<br>• WeasyPrint = CSS + HTML → PDF без LaTeX.                    |
-| **Перекрёстный слой i18n** | `gettext` заглушки + JSON словари                        | • Совместим с future RU/EN/….<br>• Используется теми же словарями, что и SPA.                   |
-| **Тестирование**           | `pytest`, `pytest-snapshot`, `pdf2image`                 | • Байт-точный diff для XLSX; растровый diff для PDF (stable).                                   |
-| **CI**                     | Re-use GitHub Action шаблона (`lint`, `test`, `build`)   | • Единообразие со `core-model`.                                                                 |
+| Что меняем         | Куда писать                         | Типовой PR                         |
+| ------------------ | ----------------------------------- | ---------------------------------- |
+| Новая колонка XLSX | `templates/*.xml.j2` + `builder.py` | `feat(xlsx): add column node-pool` |
+| Новый PDF-theme    | `report/themes/<name>.yaml` + CSS   | `feat(pdf): corporate-blue theme`  |
+| Новый язык RU→ES   | `locales/es/*.po`, шаблоны ×2       | `i18n: add Spanish`                |
 
 ---
 
-## 6. Расширение терминологических уровней
+## 9. Открытые вопросы (актуально)
 
-| Будущий уровень | Требуется выделить новые поля | Где трансформируем                                   | Пример                    |
-| --------------- | ----------------------------- | ---------------------------------------------------- | ------------------------- |
-| **VM-Layer**    | vCPU, vRAM, vDisk GB          | `core-model` (новый step) ➜ `SizingResult.vm_totals` | «8 vCPU / 32 GiB на зону» |
-| **Hardware**    | CPU socket, RAM DIMM, RackU   | idem ➜ `SizingResult.hw_totals`                      | «2 × 1U сервер по 64 GB»  |
-
-Adapter-слой остаётся **«тупым»**: он рендерит всё, что приходит в `SizingResult`.
-Добавление новых уровней = только изменение шаблонов + stylesheet, без кода адаптера.
+1. **Кириллические шрифты для PDF** — используем Noto Sans (OFL) → добавить в Docker-image.
+2. **Перформанс XLSX > 10 000 строк** — `openpyxl.Workbook(write_only=True)` + stream-write.
+3. **Audit SHA исходных YAML** — сохраняем в Postgres таблицу `report_meta` (`service` уровень).
 
 ---
 
-## 7. Структура каталогов адаптера
+## 10. Соответствие требованиям
 
-```
-adapters/
-├── __init__.py
-├── facade.py          # build_report(...)
-├── xlsx/
-│   ├── __init__.py
-│   ├── templates/     # Jinja-Excel XML templates
-│   ├── builder.py     # XlsxAdapter
-│   └── styles.py      # corporate palette
-├── report/            # PDF / HTML
-│   ├── __init__.py
-│   ├── templates/     # Jinja2 (HTML + CSS)
-│   ├── builder.py     # PdfAdapter
-│   └── themes/        # default.yaml, dark.yaml …
-└── tests/
-    ├── unit/
-    ├── integration/
-    └── snapshots/
-```
+*Адаптеры удовлетворяют требованиям (§ 2) за счёт*:
 
----
-
-## 8. Потоки расширения
-
-| Что меняем           | Куда писать                         | Типовой Pull-Request                |
-| -------------------- | ----------------------------------- | ----------------------------------- |
-| Новый столбец в XLSX | `templates/*.xml.j2` + `builder.py` | feat: xlsx add column **node-pool** |
-| Новый theme PDF      | `report/themes/<name>.yaml` + CSS   | feat: pdf theme «corporate-blue»    |
-| Доп. язык RU→ES      | `locales/es/*.po`, шаблоны ×2       | i18n: add spanish translation       |
-
----
-
-## 9. Открытые вопросы
-
-1. **Шрифты с кириллицей** для PDF — лицензия? Noto Sans + OFL.
-2. **Скорость генер.** больших XLSX (>10 000 строк) — возможна оптимизация `write_only=True` в openpyxl.
-3. **Versioning отчётов** в базе (`service`) — куда сохранять SHA входных YAML? (см. core-model § 1 «Прослеживаемость»).
-
----
-
-## 10. Сводка соответствия требованиям
-
-*Модуль адаптеров удовлетворяет всем исходным требованиям (§ 2) за счёт*:
-
-* многоуровневой схемы данных,
-* фасадного API,
-* раздельных слой шаблон / данные / рендер,
-* строгих snapshot-тестов и одинакового CI-пайплайна.
-
----
+* независимых wheel + CLI ↔ JSON контрактов,
+* общего пакета **prism-common** для схем и утилит,
+* фасада `build_report()` + шаблон/рендер separation,
+* snapshot-тестов и унифицированного CI.

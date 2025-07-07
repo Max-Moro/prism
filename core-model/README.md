@@ -1,221 +1,179 @@
 # **PRISM Core-Model**
 
-> Движок вычислений, CLI-утилита и контрактная модель данных  
-> (уровни *Blueprint ↔ Load Profile ↔ Sizing Result*).
+> Расчётный движок, CLI-утилита и контрактные схемы
+> (уровни **Blueprint ↔ LoadProfile ↔ SizingResult**).
 
 ---
 
-## 1. Назначение модуля
+## 1 Назначение
 
-* **Принимает**:  
-  * **Project-файл** заказчика (`*.sizing.yaml`) — описывает зоны и
-    включённые BusinessModule.  
-  * Каталог или набор `Blueprint`-ов (`*.blueprint.yaml`) — формулы и граф зависимостей
-    всех команд.
-* **Вычисляет** ресурсы (CPU/RAM/Storage GB/…) для:
-  * всех Technical / Generic сервисов,
-  * их зависимостей **Infrastructure** (PostgreSQL, Kafka и др.),
-  * каждой **зоны** проекта (Prod, Test, DR …).
-* **Возвращает**  
-  типизированный объект **`SizingResult`** (см. `schemas/sizing_result.schema.json`),  
-  сериализуемый в JSON вида  
-  `{ zones: { Prod: …, Test: … }, totals: …, infra_totals: … }`.  
-  *(gRPC-API для service-модуля запланирован к v0.5.)*
+* **Вход**
+
+  * `*.sizing.yaml` — файл проекта (зоны + BusinessModule).
+  * Набор `*.blueprint.yaml` — формулы и граф зависимостей всех команд.
+* **Вычисляет** ресурсы (CPU / RAM / Storage) для Technical, Generic и Infra-сервисов в каждой зоне.
+* **Вывод** — объект **`SizingResult`** (см. схему в *prism-common*), сериализуемый в JSON:
+
+```jsonc
+{
+  "zones": { "Prod": …, "Test": … },
+  "totals": { "requests": { … }, "limits": { … } },
+  "infra_totals": { "postgres": { "storage_gb": 420 } }
+}
+```
+
+> gRPC-API для Spring-Service появится в v0.5 (см. Roadmap).
 
 ---
 
-## 2. Быстрый старт (локальный)
+## 2 Быстрый старт (локальная разработка)
 
 ```bash
-# клонируем монорепу и переходим
 git clone https://github.com/bims/prism.git
 cd prism
+python -m venv .venv && source .venv/bin/activate
 
-# создаём виртуальное окружение
-py -3.12 -m venv .venv
-.venv\Scripts\activate        # Windows PowerShell
+# 1) ставим shared-пакет и ядро
+pip install -e common       # prism-common  (schemas, units)
+pip install -e core-model   # prism-core
 
-# ставим зависимости core-model
-pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
-```
-
-Проверяем:
-
-```bash
-# чтобы запускать фактический код без установки модуля
-cd core-model/src
-
-# справка CLI
+# 2) Справка CLI
 python -m bims.prism.cli --help
 
-# smoke-тесты
-cd ..
-pytest -m unit
+# 3) Smoke-тесты ядра
+pytest core-model/tests -q
 
-# «конец-в-конец» YAML → JSON
-python -m bims.prism.cli \
-  ../../examples/acme.project.yaml ../../examples/blueprints/ | jq '.totals'
+# 4) End-to-end YAML → JSON
+python -m bims.prism.cli calculate \
+  examples/acme.project.yaml examples/blueprints \
+  | jq '.totals'
 ```
 
 ---
 
-## 3. Структура каталога `core-model`
+## 3 Каталог `core-model` (актуальный layout)
 
 ```text
 core-model/
+├─ pyproject.toml         # wheel prism-core
 ├─ src/
-│  └─ bims/
-│      └─ prism/
-│          ├─ cli.py            # Typer-CLI (entrypoint)
-│          ├─ eval.py           # MiniEvalEngine (asteval-based)
-│          ├─ units.py          # parse_quantity / human-units
-│          ├─ graph.py          # BlueprintIndex + DFS
-│          ├─ models/
-│          │   ├─ blueprint.py
-│          │   ├─ load_profile.py
-│          │   ├─ sizing_result.py
-│          │   └─ _gen/          # ← авто-сгенерированные Pydantic-классы
-│          │       ├─ blueprint_gen/
-│          │       ├─ project_gen/
-│          │       ├─ sizing_result_gen.py
-│          │       └─ load_profile_gen.py
-│          └─ schemas/
-│              ├─ load_profile.schema.json
-│              ├─ project.schema.json
-│              ├─ blueprint.schema.json
-│              └─ resource_profile.schema.json
+│  └─ bims/prism/
+│      ├─ cli.py          # Typer entrypoint
+│      ├─ eval.py         # MiniEvalEngine (asteval)
+│      ├─ graph.py        # BlueprintIndex + DFS
+│      ├─ units.py        # shim → re-export из prism-common
+│      ├─ models/
+│      │   ├─ blueprint.py
+│      │   ├─ load_profile.py
+│      │   ├─ sizing_result.py
+│      │   └─ _gen/       # ← авто-сгенерированные Pydantic-классы
+│      └─ schemas/        # ← ТОЛЬКО blueprint / resource_profile
 ├─ scripts/
-│  └─ gen_models.py      # one-shot генерация моделей из JSON-Schema
+│  └─ gen_models.py       # генерация моделей из JSON-Schema
 ├─ tests/
 │  ├─ unit/
 │  └─ integration/
-├─ requirements.txt
-├─ requirements_dev.txt
-├─ pytest.ini
-└─ README.md      ← **этот файл**
+└─ README.md  ← **этот файл**
 ```
 
-### Зачем `src/`
-Изоляция исходников от метаданных; IDE автоматически добавит его в PYTHONPATH.
+*JSON-схемы `sizing_result`, `load_profile` и `project` теперь хранится в пакете **prism-common**
+(`common/src/bims/prism/common/schemas`).*
 
 ---
 
-## 4. Мини-движок формул (`eval.py`)
+## 4 Мини-движок формул (`eval.py`)
 
-* Основан на **asteval** (Python-safe подсетевой интерпретатор).
-* Белый список функций (`ceil`, `min`, `max`, …​) задаётся в `_WHITELIST`.
-* Уже поддерживает «кавычки-единицы» (`"128Mi" → bytes`, `"150m" → cores`),
-  динамические выражения `0.02 + 0.00002 * online_users`,
-  requests / limits и рекурсивные `depends_on`.
+* Безопасный интерпретатор **asteval**.
+* Поддерживает «кавычки-единицы» (`128Mi`, `150m`), арифметику и функции из `_WHITELIST` (`ceil`, `min`, `max`, …).
+* Requests / Limits, динамические профили `@dyn`, рекурсия `depends_on`.
 
 ---
 
-## 5. CLI `prism-cli`
+## 5 CLI `prism-cli`
 
 ```bash
 usage: prism-cli calculate [OPTIONS] PROJECT_FILE [BLUEPRINT_DIR]
 
-Arguments:
-  PROJECT_FILE    customer sizing file (`*.sizing.yaml`)
-  [BLUEPRINT_DIR] Folder with `*.blueprint.yaml` (default: `blueprints/`)
-
 Options:
-  --json-out FILE  файл, куда сохранить результат (иначе вывод в stdout)
-  --help           Show this message and exit.
+  --json-out FILE  Save result instead of stdout
+  --help
 ```
 
 Пример:
 
 ```bash
-python -m bims.prism.cli calculate ^
-  projects\\acme.sizing.yaml ^
-  blueprints\\ ^
-  --json-out out\\acme.result.json
+python -m bims.prism.cli calculate \
+  projects/acme.sizing.yaml blueprints \
+  --json-out out/acme.result.json
 ```
 
 ---
 
-## 6. Разработка
+## 6 Качество кода
 
-### 6.1 Проверка качества
+| Команда                             | Что проверяет                        |
+| ----------------------------------- | ------------------------------------ |
+| `ruff core-model/src`               | стиль + авто-импорт                  |
+| `black --check core-model/src`      | форматирование                       |
+| `mypy core-model/src`               | статический анализ (Pydantic v2)     |
+| `pytest -m unit` / `-m integration` | юнит / e2e-тесты                     |
+| `scripts/gen_models.py`             | актуальность сгенерированных моделей |
 
-| Команда                       | Что делает                               |
-|-------------------------------|------------------------------------------|
-| `ruff src tests`             | быстрый линт + авто-импорт               |
-| `black src tests`            | автоформатирование                       |
-| `mypy src`                   | статический анализ типов (Pydantic v2)   |
-| `pytest -m unit`             | юнит-тесты                               |
-| `pytest -m integration`      | e2e / I-O / CLI-smoke                    |
-| `pytest --cov`               | покрытие                                 |
-| `scripts/gen_models.py`      | пересгенерировать Pydantic модели        |
-| `pre-commit run --all`       | локальный запуск всех хуков              |
-
-> **Совет:** `pre-commit install` — линтер и black проверятся при каждом `git commit`.
-
-### 6.2 Стандарты кода
-
-* **Conventional Commits** (`feat:`, `fix:`, `chore:` …​)
-* **Black + Ruff** — единственный форматтер/линтер
-* Type hints обязательны в публичных API (`models/*.py`, `eval.py`)
+> `pre-commit install` — запускает ruff/black при каждом commit.
 
 ---
 
-## 7. Зависимости
+## 7 Зависимости (файл *pyproject.toml*)
 
-| Категория | Пакет                         | Версия                     | Причина пина                             |
-|-----------|-------------------------------|----------------------------|------------------------------------------|
-| Runtime   | pydantic                      | 2.7.1                      | модели данных                            |
-| Runtime   | PyYAML                        | 6.0.2                      | парсинг YAML                             |
-| Runtime   | typer                         | 0.12.3                     | CLI                                      |
-| Runtime   | asteval                       | 0.9.31                     | движок формул                            |
-| Runtime   | jsonschema                    | 4.22                       | валидация Project/Load Profile           |
-| Runtime   | **click**                     | **8.1.7**                  | ⬅ фикс на 8.2+ (incompatible with Typer) |
-| Dev       | pytest / pytest-cov           | 8.3.1 / 5.0.0              | тесты + покрытие                         |
-| Dev       | ruff, black, mypy, pre-commit | см. `requirements_dev.txt` | стиль / типы                             |
-| Dev       | **datamodel-code-generator**  | 0.31.2                     | автоген строгих Pydantic моделей         |
+| Категория | Пакет                                                                       | Причина                     |
+| --------- | --------------------------------------------------------------------------- | --------------------------- |
+| Runtime   | `prism-common`                                                              | shared `units`, JSON-schema |
+| Runtime   | `pydantic`                                                                  | строгие модели              |
+| Runtime   | `PyYAML`                                                                    | YAML-парсер                 |
+| Runtime   | `typer[all]`                                                                | CLI                         |
+| Runtime   | `asteval`                                                                   | формульный движок           |
+| Runtime   | `jsonschema`                                                                | runtime-валидация           |
+| Dev       | `ruff`, `black`, `mypy`, `pytest`, `pytest-cov`, `datamodel-code-generator` |                             |
 
 ---
 
-## 8. Запуск тестов в CI
+## 8 CI (единый workflow)
 
-`.github/workflows/core-model.yml`
+`.github/workflows/ci.yml`:
 
 ```yaml
-name: core-model
-on:
-  push:
-    paths: ["core-model/**", ".github/workflows/core-model.yml"]
 jobs:
   test:
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r core-model/requirements.txt -r core-model/requirements_dev.txt
-      - run: ruff core-model/src core-model/tests
-      - run: black --check core-model/src core-model/tests
-      # убедиться, что сгенерированные модели свежие
-      - run: python ./core-model/scripts/gen_models.py && git diff --exit-code
-      - run: pytest core-model/tests -m "unit or integration" --cov=bims.prism
+        with: { python-version: "3.12" }
+      - run: |
+          pip install -e common
+          pip install -e core-model
+          pip install pytest ruff black
+      - run: ruff .
+      - run: black --check .
+      - run: python core-model/scripts/gen_models.py && git diff --exit-code
+      - run: pytest -m "unit or integration" --cov=bims.prism
 ```
 
 ---
 
-## 9. Как расширять
+## 9 Расширение
 
-| Что нужно | Куда писать                                           | Tips                                                                 |
-|-----------|-------------------------------------------------------|----------------------------------------------------------------------|
-| Новое поле Load Profile | `models/load_profile.py` + `load_profile.schema.json` | не забудьте обновить `Project.schema.json`, `fixtures/` и unit-тесты |
-| Новое правило формулы   | `eval.py` или отдельный `evaluator/*.py`              | добавьте в `_WHITELIST` или передайте через `Interpreter.symtable`   |
-| Новый тип единиц (IOPS) | `units.py`                                            | добавить в `_UNIT_TOKEN` и `_MULTIPLIER`                             |
-| gRPC API                | `api/proto/*.proto` → `buf generate`                  | затем adapter layer в `grpc_server.py`                               |
+| Что нужно              | Где править                                                   |
+| ---------------------- | ------------------------------------------------------------- |
+| Новое поле LoadProfile | `models/load_profile.py` + `schemas/load_profile.schema.json` |
+| Новая формула          | `eval.py` или вынос в `evaluator/*.py`                        |
+| Новый юнит ресурса     | `prism-common.units`                                          |
+| gRPC-слой              | `api/proto/*.proto` + `grpc_server.py`                        |
 
 ---
 
-## 10. Дорожная карта Core-Model
+## 10 Roadmap
 
-* [Актуальная дорожная карта для Core-Model](./ROADMAP.md)
-* [Полная Roadmap](../docs/roadmap.md)
+* [Roadmap Core-Model](./ROADMAP.md)
+* [Общая Roadmap проекта](../docs/roadmap.md)
 
+---

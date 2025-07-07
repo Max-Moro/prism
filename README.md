@@ -15,92 +15,66 @@
 
 ---
 
-## 2  Структура репозитория
+## Репозиторий: обзор
 
 ```
 .
-├── adapters/           # Генераторы XLSX и PDF/HTML (Python)
-│   ├── xlsx/           # openpyxl‑реализация
-│   └── report/         # Jinja2 + WeasyPrint шаблоны
-├── core-model/         # Движок формул (Python, Pydantic)
-├── service/            # Spring Boot REST API для админ‑панели
-├── spa/                # React + TypeScript SPA (Ant Design)
-├── infra/              # Dev/CI окружение (docker‑compose, helm)
-└── docs/               # MkDocs, ADR, диаграммы архитектуры
+├─ common/               # prism-common — схемы + утилиты (Python)
+├─ core-model/           # prism-core   — движок расчёта (Python)
+├─ adapters/
+│   ├─ xlsx/             # prism-adapters-xlsx   — Excel-отчёты (Python)
+│   └─ report/           # prism-adapters-report — PDF/HTML-отчёты (Python)
+├─ service/              # Spring Boot REST-API + gRPC к ядру
+├─ spa/                  # React SPA (Ant Design, i18n)
+├─ infra/                # docker-compose, Helm-chart, GitHub Actions
+└─ docs/                 # MkDocs site, ADR, diagrams
 ```
 
-| Модуль              | Язык / Рантайм | Основные зависимости              |
-|---------------------| -------------- | --------------------------------- |
-| **core-model**      | Python 3.12    | Pydantic v2, PyYAML               |
-| **adapters/xlsx**   | Python 3.12    | pandas, openpyxl                  |
-| **adapters/report** | Python 3.12    | Jinja2, WeasyPrint                |
-| **service**         | Java 21        | Spring Boot 3, JPA, PostgreSQL 16 |
-| **spa**             | TypeScript 5   | React 18, MobX 6, Ant Design 5    |
+*Быстрый тех-дайджест см. в README внутри каждого модуля:*
 
-### Примеры namespace
-
-| Язык                   | Пример                                    |
-| ---------------------- | ----------------------------------------- |
-| **Java (Spring Boot)** | `package bims.prism.core;`                |
-| **Python**             | `from prism.model import CustomerProfile` |
+| Компонент             | README                                   | Стек (core)               |
+|-----------------------|------------------------------------------| ------------------------- |
+| **Calculations**      | [core-model](core-model/README.md)       | Python 3.12 + Pydantic v2 |
+| **Excel-reports**     | [adapters/xlsx](adapters/xlsx/README.md) | Python 3.12 + openpyxl    |
+| **Shared schemas**    | —                                        | —                         |
+| **Admin WEB Service** | [service](service/README.md)             | Java 21 + Spring Boot 3   |
+| **Web-SPA**           | [spa](spa/README.md)                     | TypeScript 5 + React 18   |
 
 ---
 
-## 3  Быстрый старт (локальная разработка)
+## Как попробовать за 5 минут
 
-1. **Клонирование**
+```bash
+git clone https://github.com/bims/prism.git
+cd prism
+python -m venv .venv && source .venv/bin/activate
 
-   ```bash
-   git clone https://github.com/bims/prism.git
-   cd prism
-   ```
-2. **Требования**: Docker ≥ 24, Python 3.12, Node 20, Java 21.
-3. **Запуск всех сервисов**:
+# 1) расчёт
+pip install -e common -e core-model           # только ядро
+python -m bims.prism.cli calculate \
+   examples/acme.project.yaml examples/blueprints > result.json
 
-   ```bash
-   docker compose -f infra/docker-compose.yaml up --build
-   # core-model API → http://localhost:8000/health
-   # admin service  → http://localhost:8080/actuator/health
-   # SPA            → http://localhost:5173
-   ```
-4. **Запуск unit‑тестов**:
+# 2) отчёт
+pip install -e adapters/xlsx                  # ставим нужный адаптер
+python -m bims.prism.adapters.xlsx.cli result.json -o acme.xlsx
+open acme.xlsx
+```
 
-   ```bash
-   make test           # pytest + mvn + vitest
-   ```
-
-5. **Smoke-пример** (готовая связка YAML → JSON):
-
-   ```bash
-   cd core-model/src
-   python -m bims.prism.cli ../../examples/acme.project.yaml ../../examples/blueprints/ \
-     | jq '.totals'
-   ```
-   Файл `examples/README.md` описывает все шаги подробнее.
+*(Полный dev-stack — см. инструкции в `infra/` и модульных README.)*
 
 ---
 
-## 4  Рабочий процесс
-
-1. **Ветки** — `main` (защищённая) ↔ feature‑ветки (`feat/*`, `fix/*`).
-2. **Коммиты** — Conventional Commits + автогенерация changelog.
-3. **CI** — GitHub Actions (`lint`, `test`, `build`, `e2e`, `docker-push`).
-4. **Трекер задач** — GitHub Projects (Kanban).
-5. **Code review** — PR + обязательные статус‑чеки.
-
----
-
-## 5  Дополнительная документация
+## Документация
 
 * [Бизнес‑введение](docs/business_intro.md)
 * [Лесенка уровней и глоссарий PRISM](docs/layers_and_glossary.md)
 * [Архитектурный обзор](docs/architecture_overview.md)
 * [Дорожная карта](docs/roadmap.md)
-* [DSL «PRISM Blueprint»](docs/blueprint_dsl.md)
-* [Архитектура отчётных провайдеров PRISM](docs/adapters_report_architecture.md)
+* [Blueprint DSL](docs/blueprint_dsl.md)
+* [Отчётные провайдеры](docs/adapters_report_architecture.md)
 
 ---
 
-## 6  Лицензия
+## Лицензия
 
-Проект распространяется под лицензией **Apache 2.0**. Подробности в файле `LICENSE`.
+PRISM распространяется под **Apache 2.0** — см. файл [`LICENSE`](LICENSE).
